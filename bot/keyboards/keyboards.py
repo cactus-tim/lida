@@ -16,3 +16,22 @@ def get_data_ikb() -> InlineKeyboardMarkup:
     ]
     ikeyboard = InlineKeyboardMarkup(inline_keyboard=ikb)
     return ikeyboard
+
+
+def get_mail_ikb_full() -> InlineKeyboardMarkup:
+    ikb = [
+        [InlineKeyboardButton(text="ДА", callback_data="send")],
+        [InlineKeyboardButton(text="нет, мне не нравится компания", callback_data="company_reject_by_user")],
+        [InlineKeyboardButton(text="нет, мне не нравится письмо", callback_data="mail_reject_by_user")],
+    ]
+    ikeyboard = InlineKeyboardMarkup(inline_keyboard=ikb)
+    return ikeyboard
+
+
+def get_mail_ikb() -> InlineKeyboardMarkup:
+    ikb = [
+        [InlineKeyboardButton(text="ДА", callback_data="send")],
+        [InlineKeyboardButton(text="нет, мне не нравится компания", callback_data="company_reject_by_user")],
+    ]
+    ikeyboard = InlineKeyboardMarkup(inline_keyboard=ikb)
+    return ikeyboard

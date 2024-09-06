@@ -34,6 +34,12 @@ async def update_user(tg_id: int, data: dict):
             await session.commit()
 
 
+async def get_users_tg_id():
+    async with async_session() as session:
+        users_tg_id = await session.execute(select(distinct(User.tg_id)))
+        return users_tg_id.scalars().all()
+
+
 async def get_company_by_name(company_name: str):
     async with async_session() as session:
         company = await session.scalar(select(Company).where(Company.name == company_name))

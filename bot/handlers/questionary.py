@@ -3,9 +3,9 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardRemove
-from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_data, parse_company_data, parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, parse_target_company_jobtitle
 
-# from keyboards.simple_kb import make_colum_keyboard
+from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_data, parse_company_data, parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, parse_target_company_jobtitle
+from database.req import create_user, update_user
 from keyboards.keyboards import get_data_ikb
 
 # from database import requests as rq
@@ -28,7 +28,7 @@ class AiSallerBotState(StatesGroup):
 
 
 @router.callback_query(F.data == "data")
-async def cmd_quest(message: Message, state: FSMContext):
+async def cmd_data(message: Message, state: FSMContext):
     await message.answer(
         text="Чтобы я смогла это сделать, я проведу вас по 5 шагам:\n"
              "Шаг 1: Я попрошу вас рассказать о себе и о вашем бизнесе/продукте.\n"
@@ -54,7 +54,7 @@ async def cmd_quest(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_user_info)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_user_data(message.text)
-    # TODO: save to db
+    create_user(message.from_user.id, data)
 
     await message.answer(
         text=f"Рада познакомиться, {data['name']}! "
@@ -69,7 +69,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_product_info)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_product_data(message.text)
-    # TODO: save to db
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text=f"Здорово!  Если я правильно уловила суть, ваш продукт {data['product_name']} "
@@ -81,28 +81,11 @@ async def get_user_info(message: Message, state: FSMContext):
     await state.set_state(AiSallerBotState.waiting_edits_info)
 
 
-# @router.message(AiSallerBotState.waiting_edits_info)
-# async def get_user_info(message: Message, state: FSMContext):
-#     # TODO: parse_edits_data, return edits, or all good
-#     data = parse_edits_data(message.text)
-#     if data[0] != 'good':
-#         pass
-#         # TODO: save to db
-#
-#     await message.answer(
-#         text="Отлично! Это действительно важно. "
-#              "А какова стоимость вашего продукта? "
-#              "Или может все гибко под каждого клиента?",
-#         reply_markup=ReplyKeyboardRemove()
-#     )
-#     await state.set_state(AiSallerBotState.waiting_price_info)
-
-
 @router.message(AiSallerBotState.waiting_edits_info)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_edits_data(message.text)
-    if  data.get('good', 0)!= 'good':
-        pass        # TODO: save to db
+    if  data.get('good', 0) != 0:
+        update_user(message.from_user.id, data)
 
     await message.answer(
         text="Отлично! Это действительно важно. "
@@ -117,7 +100,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_company_info)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_company_data(message.text)
-    # TODO: save to db
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text="Отлично, спасибо!"
@@ -132,7 +115,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_target_company_scope)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_target_company_scope(message.text)
-    # TODO: save to db
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text="А как давно эти компании на рынке? ",
@@ -144,7 +127,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_target_company_employe)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_target_company_employe(message.text)
-    # TODO: save to db
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text="Отлично. "
@@ -157,7 +140,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_target_company_age)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_target_company_age(message.text)
-    # TODO: save to db
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text="Ага. Какую приблизительно выручку эти компании заработали за последний год? ",
@@ -169,7 +152,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_target_company_money)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_target_company_money(message.text)
-    # TODO: save to db
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text="Теперь давайте обсудим, кому именно внутри этих компаний вы хотите продавать свой продукт. "
@@ -182,7 +165,8 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_target_company_jobtitle) # TODO: написать логику функции (gpt?) + обработчик ошибок
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_target_company_jobtitle(message.text)
-    # TODO: save to db
+    data['is_active'] = True
+    update_user(message.from_user.id, data)
 
     await message.answer(
         text=f"Итак, я собрала следующую информацию: ваш продукт {User product name} "

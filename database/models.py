@@ -40,7 +40,7 @@ class User(Base):
     target_revenue_last_year = Column(ARRAY, default=[])
     target_jobtitle = Column(String, default="")
     is_active = Column(Boolean, default=False)
-    count_answer_today = Column(Integer, default=0)
+    cnt = Column(Integer, default=0)
     # past_using_time = Column(DateTime, default=datetime.utcnow)
 
 

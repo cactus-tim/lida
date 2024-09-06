@@ -13,7 +13,7 @@ async def get_user(tg_id: int):
 
 async def create_user(tg_id: int, data: dict):
     async with async_session() as session:
-        user = await session.scalar(select(User).where(User.tg_id == tg_id))
+        user = await get_user(tg_id)
         if not user:
             data['tg_id'] = tg_id
             user_data = User(**data)
@@ -25,7 +25,7 @@ async def create_user(tg_id: int, data: dict):
 
 async def update_user(tg_id: int, data: dict):
     async with async_session() as session:
-        user = await session.scalar(select(User).where(User.tg_id == tg_id))
+        user = await get_user(tg_id)
         if not user:
             print("Пользователь с таким id не найден")
         else:
@@ -85,7 +85,7 @@ async def update_company_by_id(company_id: int, data: dict):
             await session.commit()
 
 
-async def get_user_x_company_row(tg_id: int, company_name: str):
+async def get_user_x_company_row_by_name(tg_id: int, company_name: str):
     async with async_session() as session:
         company = await get_company_by_name(company_name)
         if not company:
@@ -97,3 +97,56 @@ async def get_user_x_company_row(tg_id: int, company_name: str):
             return row
         else:
             print("Запись с такими параметрами не найдена")
+
+
+async def get_user_x_company_row_by_id(tg_id: int, company_id: int):
+    async with async_session() as session:
+        row = await session.scalar(select(User_x_Company)
+                                   .where(and_(User_x_Company.tg_id == tg_id, User_x_Company.id == company_id)))
+        if row:
+            return row
+        else:
+            print("Запись с такими параметрами не найдена")
+
+
+async def create_user_x_row_by_id(tg_id: int, company_id: int):
+    async with async_session() as session:
+        row = await get_user_x_company_row_by_id(tg_id, company_id)
+        if not row:
+            row = User_x_Company(user_id=tg_id, company_id=company_id)
+            session.add(row)
+            await session.commit()
+        else:
+            print("already exist")
+
+
+async def update_user_x_row_by_id(tg_id: int, company_id: int, data):
+    async with async_session() as session:
+        row = await get_user_x_company_row_by_id(tg_id, company_id)
+        if not row:
+            print("Запись с таким id не найдена")
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
+            await session.commit()
+
+
+async def get_user_x_row_by_status(tg_id: int, status: str):
+    async with async_session() as session:
+        row = await session.scalar(select(User_x_Company)
+                                   .where(and_(User_x_Company.tg_id == tg_id, User_x_Company.status == status)))
+        if row:
+            return row
+        else:
+            print("Запись с такими параметрами не найдена")
+
+
+async def update_user_x_row_by_status(tg_id: int, status: str, data: dict):
+    async with async_session() as session:
+        row = await get_user_x_row_by_status(tg_id, status)
+        if not row:
+            print("Запись с таким статусом не найдена")
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
+            await session.commit()

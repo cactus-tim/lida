@@ -85,6 +85,45 @@ async def update_company_by_id(company_id: int, data: dict):
             await session.commit()
 
 
+async def get_one_company(tg_id: int):
+    async with async_session() as session:
+        user = await get_user(tg_id)
+        subquery = select(User_x_Company).where(User_x_Company.user_id != tg_id).subquery()
+        query = select(Company, subquery).outerjoin(subquery, Company.id == subquery.c.company_id)
+        if len(user.target_okveds > 0):
+            query = query.where(Company.okveds.any(user.target_okveds))
+
+        if len(user.target_number_employees > 0):
+            if len(user.target_number_employees == 1):
+                query = query.where(Company.target_number_employees == user.target_number_employees[0])
+            elif len(user.target_number_employees == 2):
+                query = query.where(
+                    and_(Company.target_number_employees >= user.target_number_employees[0],
+                         Company.target_number_employees <= user.target_number_employees[1]))
+
+        if len(user.target_number_years_existence > 0):
+            if len(user.target_number_years_existence == 1):
+                query = query.where(Company.target_number_years_existence == user.target_number_years_existence[0])
+            elif len(user.target_number_years_existence == 2):
+                query = query.where(
+                    and_(Company.target_number_years_existence >= user.target_number_years_existence[0],
+                         Company.target_number_years_existence <= user.target_number_years_existence[1]))
+
+        if len(user.target_revenue_last_year > 0):
+            if len(user.target_revenue_last_year == 1):
+                query = query.where(Company.target_revenue_last_year == user.target_revenue_last_year[0])
+            elif len(user.target_revenue_last_year == 2):
+                query = query.where(
+                    and_(Company.target_revenue_last_year >= user.target_revenue_last_year[0],
+                         Company.target_revenue_last_year <= user.target_revenue_last_year[1]))
+
+        query = query.where(Company.target_jobtitle == user.target_jobtitle)
+
+        result = await session.execute(query)
+
+        return result.all()[0]
+
+
 async def get_user_x_company_row_by_name(tg_id: int, company_name: str):
     async with async_session() as session:
         company = await get_company_by_name(company_name)

@@ -9,7 +9,10 @@ from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_dat
     parse_target_company_jobtitle
 from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, get_user_x_row_by_status
 from keyboards.keyboards import get_data_ikb, get_mail_ikb
-from lida.mail_sender import mail_start
+from lida.mail_sender import mail_start, send_mail
+from gpt.gpt_parsers import make_mail
+
+from lida.database.req import get_company_by_id
 
 # from database import requests as rq
 
@@ -24,12 +27,12 @@ async def cmd_send(message: Message, state: FSMContext):
         # TODO: send statistics
         pass
     else:
-        row = await get_user_x_row_by_status(message.from_user.id, "waiting")
-        mail = row['comment']
-        # TODO: await send_mail(mail)
+        row = await get_user_x_row_by_status(message.from_user.id, "requested")
+        company = await get_company_by_id(row['company_id'])
+        await send_mail(row['comment'], company, row['status'])
         user = await get_user(message.from_user.id)
         await update_user(message.from_user.id, {'cnt': user['cnt'] + 1})
-        await update_user_x_row_by_status(message.from_user.id, 'waiting', {'status': "company_rejected_by_user"})
+        await update_user_x_row_by_status(message.from_user.id, 'requested', {'status': "waiting_rpl_contact"})
         await mail_start(message.from_user.id)
 
 
@@ -37,14 +40,16 @@ async def cmd_send(message: Message, state: FSMContext):
 async def cmd_company_reject_by_user(message: Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     await update_user(message.from_user.id, {'cnt': user['cnt']+1})
-    await update_user_x_row_by_status(message.from_user.id, 'waiting', {'status': "company_rejected_by_user"})
+    await update_user_x_row_by_status(message.from_user.id, 'requested', {'status': "company_rejected_by_user"})
     await mail_start(message.from_user.id)
 
 
 @router.callback_query(F.data == "mail_reject_by_user")
 async def cmd_mail_reject_by_user(message: Message, state: FSMContext):
-    # TODO: mail = make_mail(company)
-    await update_user_x_row_by_status(message.from_user.id, 'waiting', {'comment': mail})
+    company = await get_user_x_row_by_status(message.from_user.id, 'requested')
+    user = await get_user(message.from_user.id)
+    mail = make_mail(user, company)
+    await update_user_x_row_by_status(message.from_user.id, 'requested', {'comment': mail})
     await message.answer(text=f"Хотите отправить компании {company['name']} письмо:\n"
                               f"{mail}",
                          reply_markup=get_mail_ikb())

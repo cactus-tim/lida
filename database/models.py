@@ -71,7 +71,7 @@ class User_x_Company(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, nullable=False)
     company_id = Column(Integer, nullable=False)
-    status = Column(String, default="waiting")
+    status = Column(String, default="requested")
     comment = Column(String, default="")
 
 

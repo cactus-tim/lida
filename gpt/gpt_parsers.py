@@ -30,6 +30,12 @@ def parse_string(input_string: str) -> dict:
     if input_string.strip() == "good":
         result["good"] = "good"
         return result
+    if input_string.strip() == "no":
+        result["no"] = "no"
+        return result
+    if input_string.strip() == "yes":
+        result["yes"] = "yes"
+        return result
 
     lines = input_string.strip().split('  \n')
 
@@ -319,3 +325,39 @@ async def make_mail_lpr(user, company):
     )
     data = response.choices[0].message.content
     return parse_email_text(data)
+
+
+async def parse_email_data(data: str) -> dict:
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": f"""{data}
+             это письмо от компании, которой я заинтересован продать свое бизнес решение, проанализируй его, твоя задача понять, заинтересована ли она в интеграции моего решения\n
+             если не заинтересована, то отправь мне одно слово - no
+             в противном случае следуй инструкции:
+             найди в письме поля, отвечающие за имя, должность, номер телефона и почту контактного лица (каких то данных может не быть, ничего страшного) и отправь мне в формате, не добавляя больше никаких комментариев:\n
+             lpr_name: Иван  \lpr_jobtitle: Иванов  \nlpr_mail: ivan@gmail.com  \nlpr_tel: 89219911188
+          """},
+        ]
+    )
+
+    data = response.choices[0].message.content
+
+    return parse_string(data)
+
+
+async def parse_email_data_bin(data: str) -> dict:
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": f"""{data}
+             это письмо от компании, которой я заинтересован продать свое бизнес решение, проанализируй его, твоя задача понять, заинтересована ли она в интеграции моего решения\n
+             если не заинтересована, то отправь мне одно слово - no
+             в противном случае - yes
+          """},
+        ]
+    )
+
+    data = response.choices[0].message.content
+
+    return parse_string(data)

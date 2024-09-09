@@ -30,13 +30,9 @@ async def loop():
         await mail_start(user_tg_id)
 
 
-async def send_mail(mail, company, status):
+async def send_mail(mail, to_email):
     theme = mail[0]
     body = mail[1]
-    if status == 'requested':
-        to_email = company['company_mail']
-    else:
-        to_email = company['lpr_mail']
 
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
@@ -90,10 +86,9 @@ def get_latest_email_by_sender(sender_email):
                             body = part.get_payload(decode=True).decode('utf-8')
                 else:
                     body = msg.get_payload(decode=True).decode('utf-8')
-
+        mail.logout()
         return body
 
     else:
+        mail.logout()
         return 'not found'
-
-    mail.logout()

@@ -87,7 +87,7 @@ async def get_user_info(message: Message, state: FSMContext):
 @router.message(AiSallerBotState.waiting_edits_info)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_edits_data(message.text)
-    if  data.get('good', 0) != 0:
+    if data.get('good', 0) != 0:
         update_user(message.from_user.id, data)
 
     await message.answer(

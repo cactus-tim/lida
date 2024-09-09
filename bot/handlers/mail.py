@@ -10,9 +10,9 @@ from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_dat
 from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, get_user_x_row_by_status, get_all_rows_by_user
 from keyboards.keyboards import get_data_ikb, get_mail_ikb
 from lida.mail_sender import mail_start, send_mail, get_latest_email_by_sender
-from gpt.gpt_parsers import make_mail, make_mail_lpr
+from gpt.gpt_parsers import make_mail, make_mail_lpr, parse_email_data, parse_email_data_bin
 
-from lida.database.req import get_company_by_id
+from lida.database.req import get_company_by_id, update_company_by_id
 
 # from database import requests as rq
 
@@ -26,15 +26,16 @@ async def cmd_send(message: Message, state: FSMContext):
         msg = ''
         rows = await get_all_rows_by_user(message.from_user.id)
         for row in rows:
+            company = await get_company_by_id(row['company_id'])
             if row['status'] == 'waiting_rpl_contact':
                 mail = await get_latest_email_by_sender(row['company_mail'])
                 if mail != 'not found':
-                    # TODO: analyze ans by gpt
-                    if good:
-                        # TODO: update company data in db
-                        company = await get_company_by_id(row['company_id'])
+                    data = await parse_email_data(mail)
+                    if data.get('no', 0) == 0:
+                        await update_company_by_id(row['company_id'], data) # need to test
                         mail_to_sand = await make_mail_lpr(user, company)
-                        await send_mail(mail_to_sand, company, row['status'])
+                        if company['lpr_mail'] != '':
+                            await send_mail(mail_to_sand, company['lpr_mail'])
                         await update_user_x_row_by_id({'status': 'waiting_rpl_ans', 'comment': mail})
                         msg += f"Ожидаем ответ от рпла компании {row['lpr_mail']}, вот его почта {row['lpr_mail']}\n"
                     else:
@@ -46,11 +47,11 @@ async def cmd_send(message: Message, state: FSMContext):
             elif row['status'] == 'waiting_rpl_ans':
                 mail = await get_latest_email_by_sender(row['company_mail'])
                 if mail != 'not found':
-                    # TODO: analyze ans by gpt
-                    if good:
-                        # TODO: update company data in db
+                    data = await parse_email_data_bin(mail)
+                    if data.get('no', 0) == 0:
+                        await send_mail(mail, user['email'])
                         await update_user_x_row_by_id({'status': 'lead', 'comment': mail})
-                        msg += f"Лпр комании {row['name']} подтвердил контакт, вот его номер для связи {row['lpr_tel']}"
+                        msg += f"Лпр комании {row['name']} подтвердил контакт, направила его письмо вам на почту"
                     else:
                         await update_user_x_row_by_id({'status': 'rejected_by_rpl'})
                         msg += f"Рпл компании {row['name']} к сожалению отклонил наше письмо\n"
@@ -70,7 +71,7 @@ async def cmd_send(message: Message, state: FSMContext):
     else:
         row = await get_user_x_row_by_status(message.from_user.id, "requested")
         company = await get_company_by_id(row['company_id'])
-        await send_mail(row['comment'], company, row['status'])
+        await send_mail(row['comment'], company['company_mail'])
         user = await get_user(message.from_user.id)
         await update_user(message.from_user.id, {'cnt': user['cnt'] + 1})
         await update_user_x_row_by_status(message.from_user.id, 'requested', {'status': "waiting_rpl_contact"})

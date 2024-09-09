@@ -7,10 +7,10 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_data, parse_company_data, \
     parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, \
     parse_target_company_jobtitle
-from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, get_user_x_row_by_status
+from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, get_user_x_row_by_status, get_all_rows_by_user
 from keyboards.keyboards import get_data_ikb, get_mail_ikb
-from lida.mail_sender import mail_start, send_mail
-from gpt.gpt_parsers import make_mail
+from lida.mail_sender import mail_start, send_mail, get_latest_email_by_sender
+from gpt.gpt_parsers import make_mail, make_mail_lpr
 
 from lida.database.req import get_company_by_id
 
@@ -23,9 +23,50 @@ router = Router()
 async def cmd_send(message: Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     if user['cnt'] == 10:
-        # TODO: check_old_mails, update (TODO: if take lpr contact, save to db ans sand new mail) status and comments)
-        # TODO: send statistics
-        pass
+        msg = ''
+        rows = await get_all_rows_by_user(message.from_user.id)
+        for row in rows:
+            if row['status'] == 'waiting_rpl_contact':
+                mail = await get_latest_email_by_sender(row['company_mail'])
+                if mail != 'not found':
+                    # TODO: analyze ans by gpt
+                    if good:
+                        # TODO: update company data in db
+                        company = await get_company_by_id(row['company_id'])
+                        mail_to_sand = await make_mail_lpr(user, company)
+                        await send_mail(mail_to_sand, company, row['status'])
+                        await update_user_x_row_by_id({'status': 'waiting_rpl_ans', 'comment': mail})
+                        msg += f"Ожидаем ответ от рпла компании {row['lpr_mail']}, вот его почта {row['lpr_mail']}\n"
+                    else:
+                        await update_user_x_row_by_id({'status': 'rejected_by_company'})
+                        msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
+                else:
+                    msg += f"Ожидаем контакты рпла от компании {row['lpr_mail']}\n"
+                pass
+            elif row['status'] == 'waiting_rpl_ans':
+                mail = await get_latest_email_by_sender(row['company_mail'])
+                if mail != 'not found':
+                    # TODO: analyze ans by gpt
+                    if good:
+                        # TODO: update company data in db
+                        await update_user_x_row_by_id({'status': 'lead', 'comment': mail})
+                        msg += f"Лпр комании {row['name']} подтвердил контакт, вот его номер для связи {row['lpr_tel']}"
+                    else:
+                        await update_user_x_row_by_id({'status': 'rejected_by_rpl'})
+                        msg += f"Рпл компании {row['name']} к сожалению отклонил наше письмо\n"
+                else:
+                    msg += f"Ожидаем ответ от рпла компании {row['lpr_mail']}, вот его почта {row['lpr_mail']}\n"
+                pass
+            elif row['status'] == 'company_rejected_by_user':
+                msg += f"Вы отклонили компанию {row['name']}\n"
+            elif row['status'] == 'rejected_by_company':
+                msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
+            elif row['status'] == 'rejected_by_rpl':
+                msg += f"Рпл компании {row['name']} к сожалению отклонил наше письмо\n"
+            elif row['status'] == 'lead':
+                msg += f"Лпр комании {row['name']} подтвердил контакт, вот его номер для связи {row['lpr_tel']}"
+        await message.answer(text=f"{msg}",
+                             reply_markup=ReplyKeyboardRemove())
     else:
         row = await get_user_x_row_by_status(message.from_user.id, "requested")
         company = await get_company_by_id(row['company_id'])

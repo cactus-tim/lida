@@ -4,9 +4,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardRemove
 
-from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_data, parse_company_data, parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, parse_target_company_jobtitle
+from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_data, parse_company_data, parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, parse_target_company_jobtitle, generate_message, parse_edits_data_1
 from database.req import create_user, update_user
 from keyboards.keyboards import get_data_ikb
+
+from lida.database.req import get_user
 
 # from database import requests as rq
 
@@ -24,6 +26,7 @@ class AiSallerBotState(StatesGroup):
     waiting_target_company_age = State()
     waiting_target_company_money = State()
     waiting_target_company_jobtitle = State()
+    waiting_target_company_edits = State()
 
 
 
@@ -162,24 +165,29 @@ async def get_user_info(message: Message, state: FSMContext):
     await state.set_state(AiSallerBotState.waiting_target_company_jobtitle)
 
 
-@router.message(AiSallerBotState.waiting_target_company_jobtitle) # TODO: написать логику функции (gpt?) + обработчик ошибок
+@router.message(AiSallerBotState.waiting_target_company_jobtitle)
 async def get_user_info(message: Message, state: FSMContext):
     data = parse_target_company_jobtitle(message.text)
+    update_user(message.from_user.id, data)
+    user = get_user(message.from_user.id)
+
+    await message.answer(
+        text=generate_message(user),
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(AiSallerBotState.waiting_target_company_edits)
+
+
+@router.message(AiSallerBotState.waiting_target_company_edits)
+async def get_user_info(message: Message, state: FSMContext):
+    data = parse_edits_data_1(message.text)
     data['is_active'] = True
     update_user(message.from_user.id, data)
 
     await message.answer(
-        text=f"Итак, я собрала следующую информацию: ваш продукт {User product name} "
-             f"решает {User product usecase description} и "
-             f"приносит ценность через {User value description}. "
-             f"Вы ориентируетесь на компании в сфере {User customer industry}, "
-             f"занимающиеся {User customer product}, "
-             f"с числом сотрудников около {User customer employe} "
-             f"и выручкой примерно {User customer money}. "
-             f"Они присутствуют на рынке {User customer age}, "
-             f"и мы будем искать контакты лиц на должности "
-             f"{User customer jobtitle}. "
-             f"Всё верно? Если есть что-то для уточнения, дайте знать.",
+        text="Отлично! Каждый день я буду отправлять 10 персонализированных писем в подходящие компании."
+             " Как только получу ответ с интересом к вашему продукту, "
+             "я незамедлительно передам вам всю информацию о компании, "
+             "контакте и других важных деталях, которые помогут вам успешно завершить сделки.",
         reply_markup=ReplyKeyboardRemove()
     )
-    await state.set_state(AiSallerBotState.waiting_target_company_edits)

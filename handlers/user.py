@@ -9,7 +9,6 @@ from confige import BotConfig
 
 import io
 from sqlalchemy import select
-from database.models import Questionnaire, async_session
 from aiogram.types import BufferedInputFile
 import pandas as pd
 

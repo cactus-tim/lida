@@ -31,6 +31,7 @@ async def update_user(tg_id: int, data: dict):
         else:
             for key, value in data.items():
                 setattr(user, key, value)
+            session.add(user)
             await session.commit()
 
 
@@ -71,6 +72,7 @@ async def update_company_by_name(company_name: str, data: dict):
         else:
             for key, value in data.items():
                 setattr(company, key, value)
+            session.add(company)
             await session.commit()
 
 
@@ -82,6 +84,7 @@ async def update_company_by_id(company_id: int, data: dict):
         else:
             for key, value in data.items():
                 setattr(company, key, value)
+            session.add(company)
             await session.commit()
 
 
@@ -122,7 +125,9 @@ async def get_one_company(tg_id: int):
                          Company.revenue_last_year <= user.target_revenue_last_year[1])
                 )
 
-        query = query.where(Company.target_jobtitle == user.target_jobtitle)
+        # if len(user.target_jobtitle) > 0:
+        #     if len(user.target_jobtitle) == 1:
+        #         query = query.where(Company.target_jobtitle == user.target_jobtitle)
 
         result = await session.execute(query)
         return result.scalars().first()
@@ -171,6 +176,7 @@ async def update_user_x_row_by_id(tg_id: int, company_id: int, data):
         else:
             for key, value in data.items():
                 setattr(row, key, value)
+            session.add(row)
             await session.commit()
 
 
@@ -192,6 +198,7 @@ async def update_user_x_row_by_status(tg_id: int, status: str, data: dict):
         else:
             for key, value in data.items():
                 setattr(row, key, value)
+            session.add(row)
             await session.commit()
 
 

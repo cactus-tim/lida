@@ -7,7 +7,7 @@ from database.models import User
 
 
 load_dotenv('../.env')
-token = os.getenv('TOKEN_GPT')
+token = os.getenv('TOKEN_API_GPT')
 client = OpenAI(api_key=token)
 
 
@@ -43,13 +43,25 @@ def parse_string(input_string: str) -> dict:
         key_value = line.split(': ', 1)
         if len(key_value) == 2:
             key, value = key_value
-            result[key.strip()] = value.strip()
+            if key.strip() == 'number_years_existence':
+                result[key.strip()] = int(value.strip())
+            elif key.strip() == 'number_employees':
+                result[key.strip()] = int(value.strip())
+            elif key.strip() == 'revenue_last_year':
+                result[key.strip()] = int(value.strip())
+            else:
+                result[key.strip()] = value.strip()
 
     return result
 
 
 def parse_ints(data: str) -> list:
     return [int(s) for s in data.strip().split(',')]
+
+
+def parse_strss(data: str) -> list:
+    return [str(s) for s in data.strip().split(',')]
+
 
 
 def parse_strs(data: str) -> list:
@@ -62,7 +74,7 @@ async def parse_user_data(data: str) -> dict:
         messages=[
             {"role": "user", "content": f"""{data}
             Найди в тексте поля, отвечающие за имя, фамилию, должность, почту, номер телефона, название компании, должность и отправь мне в формате, не добавляя больше никаких комментариев:\n
-            name: Иван  \nsurname: Иванов  \nrole_in_company: Менеджер по продажам  \nemail: ivanov.sales@company.com  \ntel: +7 (123) 456-78-90  \ncompany_name: AI Solutions"""},
+            name: Иван  \nsurname: Иванов  \njobtitle: Менеджер по продажам  \nemail: ivanov.sales@company.com  \ntel: +7 (123) 456-78-90  \ncompany_name: AI Solutions"""},
         ]
     )
 
@@ -138,7 +150,7 @@ async def parse_target_company_scope(data: str) -> list:
 
     data = response.choices[0].message.content
 
-    return parse_ints(data)
+    return parse_strss(data)
 
 
 async def parse_target_company_employe(data: str) -> list:
@@ -213,33 +225,37 @@ async def parse_target_company_jobtitle(data: str) -> list:
 
 
 async def generate_message(user: User) -> str:
-    data = ("Итак, я собрала следующую информацию:"
-            " ваш продукт {User product name}"
-            " решает {User product usecase description}"
-            " и приносит ценность через {User value description}."
-            " Вы ориентируетесь на компании в сфере {User customer industry},"
-            " с числом сотрудников около {User customer employe}"
-            " и выручкой примерно {User customer money}."
-            " Они присутствуют на рынке {User customer age},"
-            " и мы будем искать контакты лиц на должности {User customer jobtitle}."
-            " Всё верно? Если есть что-то для уточнения, дайте знать.")
+    data = (f"Итак, я собрала следующую информацию:"
+            f" ваш продукт {user.product_name}"
+            f" решает {user.problem_solved}"
+            f" и приносит ценность через {user.product_description}."
+            f" Вы ориентируетесь на компании в сфере {user.target_okveds} (вмето кодов оквед напиши их расшифровку, https://www.regfile.ru/okved2.html),"
+            f" с числом сотрудников около {user.target_number_employees}"
+            f" и выручкой примерно {user.target_revenue_last_year}."
+            f" Они присутствуют на рынке {user.target_number_years_existence},"
+            f" и мы будем искать контакты лиц на должности {user.target_jobtitle}."
+            f" Всё верно? Если есть что-то для уточнения, дайте знать.")
 
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "user", "content": f"""{data}
-             твоя задача подставить в этот текст его части
-             User product name - {user['product_name']}
-             User product usecase description - {user['problem_solved']}
-             User value description - {user['product_description']}
-             User customer industry - {user['target_okveds']}, вмето кодов оквед напиши их расшифровку, https://www.regfile.ru/okved2.html
-             User customer employe - {user['target_number_employees']}
-             User customer money - {user['target_revenue_last_year']}
-             User customer age - {user['target_number_years_existence']}
-             User customer jobtitle - {user['target_jobtitle']}
-          """},
+             сделай этот текст лаконичным
+            """},
         ]
     )
+    #          User product name - {user.product_name}
+    #          User product usecase description - {user.problem_solved}
+    #          User value description - {user.product_description}
+    #          User customer industry - {user.target_okveds}, вмето кодов оквед напиши их расшифровку, https://www.regfile.ru/okved2.html
+    #          User customer employe - {user.target_number_employees}
+    #          User customer money - {user.target_revenue_last_year}
+    #          User customer age - {user.target_number_years_existence}
+    #          User customer jobtitle - {user.target_jobtitle}
+    #       """},
+    #     ]
+    # )
+
     return response.choices[0].message.content
 
 

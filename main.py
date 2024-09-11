@@ -6,15 +6,14 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot_instance import bot
 from confige import BotConfig
-# from handlers import user_handlers, questionnaire_handlers, rc_handlers
+from handlers import user, questionary, mail
 
 from database.models import async_main
-from datetime import datetime, timedelta
 
 
 def register_routers(dp: Dispatcher) -> None:
     """Registers routers"""
-    dp.include_routers(user_handlers.router, questionnaire_handlers.router, rc_handlers.router)
+    dp.include_routers(user.router, questionary.router, mail.router)
 
 
 async def main() -> None:

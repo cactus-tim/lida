@@ -1,13 +1,10 @@
-from sqlalchemy import Column, DateTime, Integer, String, Boolean, ARRAY, Text, BigInteger
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Float, Numeric
+from sqlalchemy.dialects.mysql import FLOAT
+from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
-from datetime import datetime
+from bot_instance import SQL_URL_RC
 
-from bot.bot_instance import SQL_URL_RC
-
-engine = create_async_engine(url=SQL_URL_RC,
-                             echo=True)
-
+engine = create_async_engine(url=SQL_URL_RC, echo=True)
 async_session = async_sessionmaker(engine)
 
 
@@ -18,7 +15,7 @@ class Base(AsyncAttrs, DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    tg_id = Column(Integer, primary_key=True, index=True)
+    tg_id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String, default="")
     surname = Column(String, default="")
     tel = Column(String, nullable=False, unique=True)
@@ -32,16 +29,18 @@ class User(Base):
     what_creating = Column(String, default="")
     number_years_existence = Column(Integer, default=0)
     number_employees = Column(Integer, default=0)
-    revenue_last_year = Column(Integer, default=0)
+    revenue_last_year = Column(Numeric, default=0)
     life_cycle_stage = Column(String, default="")
-    target_okveds = Column(ARRAY, default=[])
-    target_number_employees = Column(ARRAY, default=[])
-    target_number_years_existence = Column(ARRAY, default=[])
-    target_revenue_last_year = Column(ARRAY, default=[])
-    target_jobtitle = Column(String, default="")
+    target_okveds = Column(ARRAY(String), default=list)
+    target_number_employees = Column(ARRAY(Integer), default=list)
+    target_number_years_existence = Column(ARRAY(Integer), default=list)
+    target_revenue_last_year = Column(ARRAY(Numeric), default=list)
+    target_jobtitle = Column(ARRAY(String), default="")
     is_active = Column(Boolean, default=False)
     cnt = Column(Integer, default=0)
     # past_using_time = Column(DateTime, default=datetime.utcnow)
+
+    companies = relationship("User_x_Company", back_populates="user")
 
 
 class Company(Base):
@@ -49,11 +48,11 @@ class Company(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, default="")
-    okveds = Column(ARRAY)
-    inn = Column(Integer, default=0)
+    okveds = Column(ARRAY(String), default=list)
+    inn = Column(BigInteger, default=0)
     number_employees = Column(Integer, default=0)
     number_years_existence = Column(Integer, default=0)
-    revenue_last_year = Column(Integer, default=0)
+    revenue_last_year = Column(Numeric, default=0)
     registration_form = Column(Integer, default=0)
     description = Column(String, default="")
     company_mail = Column(String, default="")
@@ -64,15 +63,20 @@ class Company(Base):
     lpr_mail = Column(String, default="")
     lpr_tel = Column(String, default="")
 
+    users = relationship("User_x_Company", back_populates="company")
+
 
 class User_x_Company(Base):
     __tablename__ = "user_x_company"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, nullable=False)
-    company_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.tg_id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
     status = Column(String, default="requested")
     comment = Column(String, default="")
+
+    user = relationship("User", back_populates="companies")
+    company = relationship("Company", back_populates="users")
 
 
 async def async_main():

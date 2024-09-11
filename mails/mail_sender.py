@@ -5,17 +5,16 @@ import imaplib
 import email
 from email.header import decode_header
 
-from bot.bot_instance import bot
-from lida.lida_instance import login, password
-from database.models import User, Company, User_x_Company
-from database.req import get_users_tg_id, create_user_x_row_row, update_user_x_row_by_id, get_user, get_one_company
+from bot_instance import bot
+from mails.lida_instance import login, password
+from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail
 
 
 async def mail_start(user_tg_id: int):
     company = await get_one_company(user_tg_id)
-    await create_user_x_row_row(user_tg_id, company['id'])
+    await create_user_x_row_by_id(user_tg_id, company['id'])
     user = await get_user(user_tg_id)
     mail = await make_mail(user, company)
     await update_user_x_row_by_id(user_tg_id, company['id'], {'comment': mail})

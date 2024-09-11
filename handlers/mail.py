@@ -9,10 +9,10 @@ from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_dat
     parse_target_company_jobtitle
 from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, get_user_x_row_by_status, get_all_rows_by_user
 from keyboards.keyboards import get_data_ikb, get_mail_ikb
-from lida.mail_sender import mail_start, send_mail, get_latest_email_by_sender
+from mails.mail_sender import mail_start, send_mail, get_latest_email_by_sender
 from gpt.gpt_parsers import make_mail, make_mail_lpr, parse_email_data, parse_email_data_bin
 
-from lida.database.req import get_company_by_id, update_company_by_id
+from database.req import get_company_by_id, update_company_by_id
 
 # from database import requests as rq
 
@@ -20,11 +20,11 @@ router = Router()
 
 
 @router.callback_query(F.data == "send")
-async def cmd_send(message: Message, state: FSMContext):
-    user = await get_user(message.from_user.id)
+async def cmd_send(callback: F.CallbackQuery, state: FSMContext):
+    user = await get_user(callback.message.from_user.id)
     if user['cnt'] == 10:
         msg = ''
-        rows = await get_all_rows_by_user(message.from_user.id)
+        rows = await get_all_rows_by_user(callback.message.from_user.id)
         for row in rows:
             company = await get_company_by_id(row['company_id'])
             if row['status'] == 'waiting_rpl_contact':
@@ -66,32 +66,32 @@ async def cmd_send(message: Message, state: FSMContext):
                 msg += f"Рпл компании {row['name']} к сожалению отклонил наше письмо\n"
             elif row['status'] == 'lead':
                 msg += f"Лпр комании {row['name']} подтвердил контакт, вот его номер для связи {row['lpr_tel']}"
-        await message.answer(text=f"{msg}",
+        await callback.message.answer(text=f"{msg}",
                              reply_markup=ReplyKeyboardRemove())
     else:
-        row = await get_user_x_row_by_status(message.from_user.id, "requested")
+        row = await get_user_x_row_by_status(callback.message.from_user.id, "requested")
         company = await get_company_by_id(row['company_id'])
         await send_mail(row['comment'], company['company_mail'])
-        user = await get_user(message.from_user.id)
-        await update_user(message.from_user.id, {'cnt': user['cnt'] + 1})
-        await update_user_x_row_by_status(message.from_user.id, 'requested', {'status': "waiting_rpl_contact"})
-        await mail_start(message.from_user.id)
+        user = await get_user(callback.message.from_user.id)
+        await update_user(callback.message.from_user.id, {'cnt': user['cnt'] + 1})
+        await update_user_x_row_by_status(callback.message.from_user.id, 'requested', {'status': "waiting_rpl_contact"})
+        await mail_start(callback.message.from_user.id)
 
 
 @router.callback_query(F.data == "company_reject_by_user")
-async def cmd_company_reject_by_user(message: Message, state: FSMContext):
-    user = await get_user(message.from_user.id)
-    await update_user(message.from_user.id, {'cnt': user['cnt']+1})
-    await update_user_x_row_by_status(message.from_user.id, 'requested', {'status': "company_rejected_by_user"})
-    await mail_start(message.from_user.id)
+async def cmd_company_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
+    user = await get_user(callback.message.from_user.id)
+    await update_user(callback.message.from_user.id, {'cnt': user['cnt']+1})
+    await update_user_x_row_by_status(callback.message.from_user.id, 'requested', {'status': "company_rejected_by_user"})
+    await mail_start(callback.message.from_user.id)
 
 
 @router.callback_query(F.data == "mail_reject_by_user")
-async def cmd_mail_reject_by_user(message: Message, state: FSMContext):
-    company = await get_user_x_row_by_status(message.from_user.id, 'requested')
-    user = await get_user(message.from_user.id)
+async def cmd_mail_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
+    company = await get_user_x_row_by_status(callback.message.from_user.id, 'requested')
+    user = await get_user(callback.message.from_user.id)
     mail = make_mail(user, company)
-    await update_user_x_row_by_status(message.from_user.id, 'requested', {'comment': mail})
-    await message.answer(text=f"Хотите отправить компании {company['name']} письмо:\n"
+    await update_user_x_row_by_status(callback.message.from_user.id, 'requested', {'comment': mail})
+    await callback.message.answer(text=f"Хотите отправить компании {company['name']} письмо:\n"
                               f"{mail}",
                          reply_markup=get_mail_ikb())

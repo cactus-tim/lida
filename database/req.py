@@ -43,7 +43,7 @@ async def get_users_tg_id():
 
 async def get_company_by_name(company_name: str):
     async with async_session() as session:
-        company = await session.scalar(select(Company).where(Company.name == company_name))
+        company = await session.scalar(select(Company).where(Company.company_name == company_name))
         return company
 
 
@@ -150,7 +150,7 @@ async def get_user_x_company_row_by_name(tg_id: int, company_name: str):
 async def get_user_x_company_row_by_id(tg_id: int, company_id: int):
     async with async_session() as session:
         row = await session.scalar(select(User_x_Company)
-                                   .where(and_(User_x_Company.tg_id == tg_id, User_x_Company.id == company_id)))
+                                   .where(and_(User_x_Company.user_id == tg_id, User_x_Company.company_id == company_id)))
         if row:
             return row
         else:
@@ -183,7 +183,7 @@ async def update_user_x_row_by_id(tg_id: int, company_id: int, data):
 async def get_user_x_row_by_status(tg_id: int, status: str):
     async with async_session() as session:
         row = await session.scalar(select(User_x_Company)
-                                   .where(and_(User_x_Company.tg_id == tg_id, User_x_Company.status == status)))
+                                   .where(and_(User_x_Company.user_id == tg_id, User_x_Company.status == status)))
         if row:
             return row
         else:

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Float, Numeric
+from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Float, Numeric, JSON
 from sqlalchemy.dialects.mysql import FLOAT
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
@@ -47,7 +47,7 @@ class Company(Base):
     __tablename__ = "company"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, default="")
+    company_name = Column(String, default="")
     okveds = Column(ARRAY(String), default=list)
     inn = Column(BigInteger, default=0)
     number_employees = Column(Integer, default=0)
@@ -73,7 +73,7 @@ class User_x_Company(Base):
     user_id = Column(Integer, ForeignKey("users.tg_id"), nullable=False)
     company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
     status = Column(String, default="requested")
-    comment = Column(String, default="")
+    comment = Column(JSON, default="")
 
     user = relationship("User", back_populates="companies")
     company = relationship("Company", back_populates="users")

@@ -9,6 +9,13 @@ async def get_user(tg_id: int):
             return user
         else:
             print("Пользователь с таким id не найден")
+            return "not created"
+
+
+async def get_thread(tg_id: int) -> str:
+    async with async_session() as session:
+        user = await get_user(tg_id)
+        return user.thread
 
 
 async def create_user(tg_id: int, data: dict):

@@ -47,8 +47,8 @@ async def loop():
     #     'lpr_mail': '33333',
     #     'lpr_tel': '33333',
     # }
-    await create_company(data)
-    await update_user(483458201,{'is_active': True})
+    # await create_company(data)
+    # await update_user(483458201,{'is_active': True})
 
     user_tg_ids = await get_users_tg_id()
     for user_tg_id in user_tg_ids:

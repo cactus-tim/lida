@@ -4,7 +4,7 @@ from datetime import datetime
 
 from database.req import create_company
 
-file_path = '' #path to .csv file on your computer
+file_path = '/Users/timofejsosnin/Downloads/companies_data.csv' #path to .csv file on your computer
 companies_df = pd.read_csv(file_path)
 
 async def csv_to_db():

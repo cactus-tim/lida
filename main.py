@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from bot_instance import bot
 from confige import BotConfig
 from database.parse_company import csv_to_db
-from handlers import user, questionary, mail
+from handlers import user, questionary_ai, mail
 from mails.mail_sender import loop
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,7 +19,7 @@ from database.models import async_main
 
 def register_routers(dp: Dispatcher) -> None:
     """Registers routers"""
-    dp.include_routers(user.router, questionary.router, mail.router)
+    dp.include_routers(user.router, questionary_ai.router, mail.router)
 
 
 async def main() -> None:

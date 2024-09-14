@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Float, Numeric, JSON
+from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Float, Numeric, JSON, Text
 from sqlalchemy.dialects.mysql import FLOAT
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
@@ -38,6 +38,7 @@ class User(Base):
     target_jobtitle = Column(ARRAY(String), default="")
     is_active = Column(Boolean, default=False)
     cnt = Column(Integer, default=0)
+    thread = Column(String, default='')
     # past_using_time = Column(DateTime, default=datetime.utcnow)
 
     companies = relationship("User_x_Company", back_populates="user")

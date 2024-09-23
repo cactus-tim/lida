@@ -45,7 +45,7 @@ class User(Base):
 
 
 class Company(Base):
-    __tablename__ = "company"
+    __tablename__ = "сompany"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     company_name = Column(String, default="")
@@ -64,22 +64,22 @@ class Company(Base):
     lpr_mail = Column(String, default="")
     lpr_tel = Column(String, default="")
 
-    users = relationship("User_x_Company", back_populates="company")
+    users = relationship("User_x_Company", back_populates="сompany")
 
 
 class User_x_Company(Base):
-    __tablename__ = "user_x_company"
+    __tablename__ = "user_x_сompany"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.tg_id"), nullable=False)
-    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("сompany.id"), nullable=False)
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
 
-    user = relationship("User", back_populates="companies")
+    user = relationship("User", back_populates="сompanies")
     company = relationship("Company", back_populates="users")
 
 
 async def async_main():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await сonn.run_sync(Base.metadata.create_all)

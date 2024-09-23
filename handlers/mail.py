@@ -1,4 +1,5 @@
 from aiogram import Router, F
+from aiogram.enums import ParseMode
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -7,7 +8,8 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from gpt.gpt_parsers import parse_user_data, parse_product_data, parse_edits_data, parse_company_data, \
     parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, \
     parse_target_company_jobtitle
-from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, get_user_x_row_by_status, get_all_rows_by_user
+from database.req import create_user, update_user, update_user_x_row_by_id, update_user_x_row_by_status, get_user, \
+    get_user_x_row_by_status, get_all_rows_by_user
 from keyboards.keyboards import get_data_ikb, get_mail_ikb
 from mails.mail_sender import mail_start, send_mail, get_latest_email_by_sender
 from gpt.gpt_parsers import make_mail, make_mail_lpr, parse_email_data, parse_email_data_bin
@@ -38,7 +40,7 @@ async def cmd_send(callback: F.CallbackQuery, state: FSMContext):
 async def cmd_company_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
     await callback.message.delete()
     user = await get_user(callback.from_user.id)
-    await update_user(callback.from_user.id, {'cnt': user.cnt+1})
+    await update_user(callback.from_user.id, {'cnt': user.cnt + 1})
     await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "company_rejected_by_user"})
     await mail_start(callback.from_user.id)
 
@@ -52,5 +54,6 @@ async def cmd_mail_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
     mail = await make_mail(user, company)
     await update_user_x_row_by_status(callback.from_user.id, 'requested', {'comment': mail})
     await callback.message.answer(text=f"Хотите отправить компании {company.company_name} письмо:\n"
-                              f"{mail}",
-                         reply_markup=get_mail_ikb())
+                                       f"{mail}",
+                                  reply_markup=get_mail_ikb(),
+                                  parse_mode=ParseMode.HTML)

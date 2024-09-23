@@ -5,6 +5,7 @@ import imaplib
 import email
 from email.header import decode_header
 
+from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardRemove
 
 from bot_instance import bot
@@ -26,7 +27,8 @@ async def mail_start(user_tg_id: int):
     await update_user_x_row_by_id(user_tg_id, company.id, {'comment': mail})
     await bot.send_message(user_tg_id, text=f"Хотите отправить компании {company.company_name} письмо:\n"
                                             f"{mail}",
-                           reply_markup=get_mail_ikb_full())
+                           reply_markup=get_mail_ikb_full(),
+                           parse_mode=ParseMode.HTML)
 
 
 async def loop():
@@ -106,8 +108,9 @@ async def send_stat(user_tg_id: int):
             msg += f"Рпл компании {company.name} к сожалению отклонил наше письмо\n"
         elif row['status'] == 'lead':
             msg += f"Лпр комании {company.name} подтвердил контакт, вот его номер для связи {company.lpr_tel}"
-    await bot.send_message(user_tg_id, text=f"{msg}",
-                                  reply_markup=ReplyKeyboardRemove())
+    await bot.send_message(user_tg_id, text=msg,
+                           reply_markup=ReplyKeyboardRemove(),
+                           parse_mode=ParseMode.HTML)
 
 
 async def send_mail(theme, mail, to_email):

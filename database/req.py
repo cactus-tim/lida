@@ -105,34 +105,44 @@ async def get_one_company(tg_id: int):
         if len(user.target_okveds) > 0:
             # query = query.where(Company.okveds.any(user.target_okveds))
             # query = query.filter(func.unnest(Company.okveds).in_(user.target_okveds))
-            query = query.filter(Company.okveds.op('&&')(user.target_okveds))
+            # query = query.filter(Company.okveds.op('&&')(user.target_okveds))
+            query = query.where(Company.okveds.in_(user.target_okveds))  # check
 
-        if len(user.target_number_employees) > 0:
+        if len(user.target_number_employees) > 0:  # need to check
             if len(user.target_number_employees) == 1:
-                query = query.where(Company.number_employees >= user.target_number_employees[0])
-            elif len(user.target_number_employees) == 2:
+                query = query.where(
+                    and_(Company.number_employees >= user.target_number_employees[0]/2,
+                         Company.number_employees <= user.target_number_employees[0]*2)
+                )
+            elif len(user.target_number_employees) >= 2:
                 query = query.where(
                     and_(Company.number_employees >= user.target_number_employees[0],
-                         Company.number_employees <= user.target_number_employees[1])
+                         Company.number_employees <= user.target_number_employees[-1])
                 )
 
-        if len(user.target_number_years_existence) > 0:
+        if len(user.target_number_years_existence) > 0:  # need to check
             if len(user.target_number_years_existence) == 1:
-                query = query.where(Company.number_years_existence >= user.target_number_years_existence[0])
-            elif len(user.target_number_years_existence) == 2:
+                query = query.where(
+                    and_(Company.number_years_existence >= user.target_number_years_existence[0]/2,
+                         Company.number_employees <= user.target_number_years_existence[0]*2)
+                )
+            elif len(user.target_number_years_existence) >= 2:
                 query = query.where(
                     and_(Company.number_years_existence >= user.target_number_years_existence[0],
-                         Company.number_years_existence <= user.target_number_years_existence[1])
+                         Company.number_years_existence <= user.target_number_years_existence[-1])
                 )
 
-        # if len(user.target_revenue_last_year) > 0:
-        #     if len(user.target_revenue_last_year) == 1:
-        #         query = query.where(Company.revenue_last_year >= user.target_revenue_last_year[0])
-        #     elif len(user.target_revenue_last_year) == 2:
-        #         query = query.where(
-        #             and_(Company.revenue_last_year >= user.target_revenue_last_year[0],
-        #                  Company.revenue_last_year <= user.target_revenue_last_year[1])
-        #         )
+        if len(user.target_revenue_last_year) > 0:  # need to check
+            if len(user.target_revenue_last_year) == 1:
+                query = query.where(
+                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/2,
+                         Company.revenue_last_year <= user.target_revenue_last_year[0]*2)
+                )
+            elif len(user.target_revenue_last_year) >= 2:
+                query = query.where(
+                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0],
+                         Company.revenue_last_year <= user.target_revenue_last_year[-1])
+                )
 
         # if len(user.target_jobtitle) > 0:
         #     if len(user.target_jobtitle) == 1:

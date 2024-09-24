@@ -26,7 +26,7 @@ async def mail_start(user_tg_id: int):
     mail = await make_mail(user, company)
     await update_user_x_row_by_id(user_tg_id, company.id, {'comment': mail})
     await bot.send_message(user_tg_id, text=f"Хотите отправить компании {company.company_name} письмо:\n"
-                                            f"{mail}",
+                                            f"{mail['text']}",
                            reply_markup=get_mail_ikb_full(),
                            parse_mode=ParseMode.HTML)
 

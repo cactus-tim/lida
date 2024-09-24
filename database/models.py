@@ -45,11 +45,11 @@ class User(Base):
 
 
 class Company(Base):
-    __tablename__ = "сompany"
+    __tablename__ = "company"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     company_name = Column(String, default="")
-    okveds = Column(ARRAY(String), default=list)
+    okveds = Column(String, default="")
     inn = Column(BigInteger, default=0)
     number_employees = Column(Integer, default=0)
     number_years_existence = Column(Integer, default=0)
@@ -64,22 +64,22 @@ class Company(Base):
     lpr_mail = Column(String, default="")
     lpr_tel = Column(String, default="")
 
-    users = relationship("User_x_Company", back_populates="сompany")
+    users = relationship("User_x_Company", back_populates="company")
 
 
 class User_x_Company(Base):
-    __tablename__ = "user_x_сompany"
+    __tablename__ = "user_x_company"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.tg_id"), nullable=False)
-    company_id = Column(Integer, ForeignKey("сompany.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
 
-    user = relationship("User", back_populates="сompanies")
+    user = relationship("User", back_populates="companies")
     company = relationship("Company", back_populates="users")
 
 
 async def async_main():
     async with engine.begin() as conn:
-        await сonn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)

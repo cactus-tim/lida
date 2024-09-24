@@ -46,7 +46,7 @@ async def cmd_quest(callback: F.CallbackQuery):
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
-        content="привет, давай начнем, не здоровайся со мной в ответ, просто начни диалог"
+        content="давай начнем\nне приветствуй меня, просто начни диалог"
     )
 
     run = client.beta.threads.runs.create_and_poll(
@@ -90,6 +90,7 @@ async def gpt_handler(message: Message):
     if (data[0] == '{' and data[-1] == '}') or (data[8] == '{' and data[-5] == '}'):
         data_to_db = json.loads(messages.data[0].content[0].text.value)
         data_to_db['is_active'] = True
+        # if you need you can here cut okveds
         await update_user(user_id, data_to_db)
         await message.answer(text="Отлично! Я заполнила всю информацию и приступила к поиску подходящих компаний. "
                                   "Ежедневно я буду находить 10 таких компаний и составлять для них "

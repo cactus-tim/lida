@@ -54,6 +54,6 @@ async def cmd_mail_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
     mail = await make_mail(user, company)
     await update_user_x_row_by_status(callback.from_user.id, 'requested', {'comment': mail})
     await callback.message.answer(text=f"Хотите отправить компании {company.company_name} письмо:\n"
-                                       f"{mail}",
+                                       f"{mail['text']}",
                                   reply_markup=get_mail_ikb(),
                                   parse_mode=ParseMode.HTML)

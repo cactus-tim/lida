@@ -5,7 +5,9 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.enums import ParseMode
 import json
+import io
 
+from bot_instance import bot
 from gpt.gpt_parsers import client, parse_user_data, parse_product_data, parse_edits_data, parse_company_data, \
     parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, \
     parse_target_company_jobtitle, generate_message, parse_edits_data_1
@@ -62,7 +64,24 @@ async def cmd_quest(callback: F.CallbackQuery):
 @router.message()
 async def gpt_handler(message: Message):
     user_id = message.from_user.id
-    user_message = message.text
+    if message.voice:
+        voice_file = io.BytesIO()
+        voice_file_id = message.voice.file_id
+        file = await bot.get_file(voice_file_id)
+        await bot.download_file(file.file_path, voice_file)
+        voice_file.seek(0)
+        voice_file.name = "voice_message.ogg"
+
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=voice_file,
+            response_format="text"
+        )
+        user_message = transcription
+    elif message.text:
+        user_message = message.text
+    else:
+        return
     user = await get_user(user_id)
     if user.is_active:
         await message.answer(text="Я уже убежала искать подходящие компании, как только найду и проверю их, "

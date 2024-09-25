@@ -111,37 +111,37 @@ async def get_one_company(tg_id: int):
         if len(user.target_number_employees) > 0:  # need to check
             if len(user.target_number_employees) == 1:
                 query = query.where(
-                    and_(Company.number_employees >= user.target_number_employees[0]/2,
-                         Company.number_employees <= user.target_number_employees[0]*2)
+                    and_(Company.number_employees >= user.target_number_employees[0]/4,
+                         Company.number_employees <= user.target_number_employees[0]*4)
                 )
             elif len(user.target_number_employees) >= 2:
                 query = query.where(
-                    and_(Company.number_employees >= user.target_number_employees[0],
-                         Company.number_employees <= user.target_number_employees[-1])
+                    and_(Company.number_employees >= user.target_number_employees[0]/2,
+                         Company.number_employees <= user.target_number_employees[-1]*2)
                 )
 
         if len(user.target_number_years_existence) > 0:  # need to check
             if len(user.target_number_years_existence) == 1:
                 query = query.where(
-                    and_(Company.number_years_existence >= user.target_number_years_existence[0]/2,
-                         Company.number_employees <= user.target_number_years_existence[0]*2)
+                    and_(Company.number_years_existence >= user.target_number_years_existence[0]/4,
+                         Company.number_employees <= user.target_number_years_existence[0]*4)
                 )
             elif len(user.target_number_years_existence) >= 2:
                 query = query.where(
-                    and_(Company.number_years_existence >= user.target_number_years_existence[0],
-                         Company.number_years_existence <= user.target_number_years_existence[-1])
+                    and_(Company.number_years_existence >= user.target_number_years_existence[0]/2,
+                         Company.number_years_existence <= user.target_number_years_existence[-1]*2)
                 )
 
         if len(user.target_revenue_last_year) > 0:  # need to check
             if len(user.target_revenue_last_year) == 1:
                 query = query.where(
-                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/2,
-                         Company.revenue_last_year <= user.target_revenue_last_year[0]*2)
+                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/4,
+                         Company.revenue_last_year <= user.target_revenue_last_year[0]*4)
                 )
             elif len(user.target_revenue_last_year) >= 2:
                 query = query.where(
-                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0],
-                         Company.revenue_last_year <= user.target_revenue_last_year[-1])
+                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/2,
+                         Company.revenue_last_year <= user.target_revenue_last_year[-1]*2)
                 )
 
         # if len(user.target_jobtitle) > 0:
@@ -150,7 +150,7 @@ async def get_one_company(tg_id: int):
 
         result = await session.execute(query)
         data = result.scalars().first()
-        print('---'*30, '\n', data, '\n', '---'*30)
+        print('=====\n'*5, data, '\n', '=====\n'*5)
         return data
 
 

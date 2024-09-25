@@ -49,7 +49,7 @@ async def main() -> None:
                       id='loop')
 
     try:
-        scheduler.start()
+        # scheduler.start()
         await dp.start_polling(bot, skip_updates=True)
     except Exception as _ex:
         print(f'Exception: {_ex}')

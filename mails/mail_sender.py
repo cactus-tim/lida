@@ -8,12 +8,16 @@ from email.header import decode_header
 from aiogram.enums import ParseMode
 from aiogram.types import ReplyKeyboardRemove
 
+from error_handlers.handlers import mail_error_handler
+
 from bot_instance import bot
 from mails.lida_instance import login, password
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
     create_company, get_company_by_id, get_all_rows_by_user, update_user
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail, parse_email_data_bin
+from error_handlers.errors import *
+from handlers.error import safe_send_message
 
 
 async def mail_start(user_tg_id: int):
@@ -21,14 +25,21 @@ async def mail_start(user_tg_id: int):
     if user.cnt >= 10:
         await send_stat(user_tg_id)
     company = await get_one_company(user_tg_id)
+    if not company:
+        return None
     # company = await get_company_by_id(1)
     await create_user_x_row_by_id(user_tg_id, company.id)
     mail = await make_mail(user, company)
+    print(mail)
+    if not mail:
+        await safe_send_message(bot, user_tg_id, text=" У нас какие то проблемы, попробуйте пожалуйста позже")
+        await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
+        return None
     await update_user_x_row_by_id(user_tg_id, company.id, {'comment': mail})
-    await bot.send_message(user_tg_id, text=f"Хотите отправить компании {company.company_name} письмо:\n"
-                                            f"{mail['text']}",
-                           reply_markup=get_mail_ikb_full(),
-                           parse_mode=ParseMode.HTML)
+    await safe_send_message(bot, user_tg_id, text=f"Для компании {company.company_name} я подготовила письмо:\n"
+                                                  f"Кратокое описании компании:\n{mail['prev']}\n\n\n"
+                                                  f"Письмо:\n\n{mail['text']}",
+                            reply_markup=get_mail_ikb_full())
 
 
 async def loop():
@@ -56,12 +67,12 @@ async def loop():
     for user_tg_id in user_tg_ids:
         user = await get_user(user_tg_id)
         if user.is_active:
-            await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
+            # await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
             await mail_start(user_tg_id)
 
 
 async def send_stat(user_tg_id: int):
-    await update_user(user_tg_id, {'is_active': True})
+    await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
     msg = 'Лимит сообщений на сегодня исчерпан\n'
     rows = await get_all_rows_by_user(user_tg_id)
@@ -108,11 +119,10 @@ async def send_stat(user_tg_id: int):
             msg += f"Рпл компании {company.name} к сожалению отклонил наше письмо\n"
         elif row['status'] == 'lead':
             msg += f"Лпр комании {company.name} подтвердил контакт, вот его номер для связи {company.lpr_tel}"
-    await bot.send_message(user_tg_id, text=msg,
-                           reply_markup=ReplyKeyboardRemove(),
-                           parse_mode=ParseMode.HTML)
+    await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove(),)
 
 
+@mail_error_handler
 async def send_mail(theme, mail, to_email):
     theme = theme
     body = mail
@@ -140,6 +150,7 @@ async def decode_mime_words(s):
     )
 
 
+@mail_error_handler
 async def get_latest_email_by_sender(sender_email):
     imap_server = "imap.timeweb.ru"
     mail = imaplib.IMAP4_SSL(imap_server, 993)

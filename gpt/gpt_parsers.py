@@ -2,29 +2,37 @@ from openai import OpenAI
 import os
 import re
 from dotenv import load_dotenv
+from error_handlers.errors import *
+from error_handlers.handlers import gpt_error_handler, parser_error_handler
 
 from database.models import User
-
 
 load_dotenv('../.env')
 token = os.getenv('TOKEN_API_GPT')
 client = OpenAI(api_key=token)
 
 
+@parser_error_handler
 def parse_email_text(text):
+    prev_match = re.search(r'Превью:\s*(.*)', text)
     subject_match = re.search(r'Тема:\s*(.*)', text)
     body_match = re.search(r'Письмо:\s*(.*)', text, re.DOTALL)
 
+    prev = prev_match.group(1).strip() if subject_match else None
     subject = subject_match.group(1).strip() if subject_match else None
     body = body_match.group(1).strip() if body_match else None
 
-    return {
-        "theme": subject,
-        "text": body
-    }
+    if not prev or not subject or not body:
+        raise ParseError
+    else:
+        return {
+            "prev": prev,
+            "theme": subject,
+            "text": body
+        }
 
 
-
+@parser_error_handler
 def parse_string(input_string: str) -> dict:
     result = {}
     if input_string.strip() == "good":
@@ -51,8 +59,10 @@ def parse_string(input_string: str) -> dict:
                 result[key.strip()] = int(value.strip())
             else:
                 result[key.strip()] = value.strip()
-
-    return result
+    if not result:
+        raise ParseError
+    else:
+        return result
 
 
 def parse_ints(data: str) -> list:
@@ -61,7 +71,6 @@ def parse_ints(data: str) -> list:
 
 def parse_strss(data: str) -> list:
     return [str(s) for s in data.strip().split(',')]
-
 
 
 def parse_strs(data: str) -> list:
@@ -98,7 +107,7 @@ async def parse_product_data(data: str) -> dict:
     return parse_string(data)
 
 
-async def parse_edits_data(data: str) -> dict:
+async def parse_edits_data(data: str) -> dict:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -118,7 +127,7 @@ async def parse_edits_data(data: str) -> dict:
     return parse_string(data)
 
 
-async def parse_company_data(data: str) -> dict:
+async def parse_company_data(data: str) -> dict:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -134,7 +143,7 @@ async def parse_company_data(data: str) -> dict:
     return parse_string(data)
 
 
-async def parse_target_company_scope(data: str) -> list:
+async def parse_target_company_scope(data: str) -> list:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -153,7 +162,7 @@ async def parse_target_company_scope(data: str) -> list:
     return parse_strss(data)
 
 
-async def parse_target_company_employe(data: str) -> list:
+async def parse_target_company_employe(data: str) -> list:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -171,7 +180,7 @@ async def parse_target_company_employe(data: str) -> list:
     return parse_ints(data)
 
 
-async def parse_target_company_age(data: str) -> list:
+async def parse_target_company_age(data: str) -> list:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -189,7 +198,7 @@ async def parse_target_company_age(data: str) -> list:
     return parse_ints(data)
 
 
-async def parse_target_company_money(data: str) -> list:
+async def parse_target_company_money(data: str) -> list:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -207,7 +216,7 @@ async def parse_target_company_money(data: str) -> list:
     return parse_ints(data)
 
 
-async def parse_target_company_jobtitle(data: str) -> list:
+async def parse_target_company_jobtitle(data: str) -> list:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -224,7 +233,7 @@ async def parse_target_company_jobtitle(data: str) -> list:
     return parse_strs(data)
 
 
-async def generate_message(user: User) -> str:
+async def generate_message(user: User) -> str:  # not used
     data = (f"Итак, я собрала следующую информацию:"
             f" ваш продукт {user.product_name}"
             f" решает {user.problem_solved}"
@@ -259,7 +268,7 @@ async def generate_message(user: User) -> str:
     return response.choices[0].message.content
 
 
-async def parse_edits_data_1(data: str) -> dict:
+async def parse_edits_data_1(data: str) -> dict:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -279,6 +288,7 @@ async def parse_edits_data_1(data: str) -> dict:
     return parse_string(data)
 
 
+@gpt_error_handler
 async def make_mail(user, company):
     str = f"""
         Ты — Лида, эксперт по B2B email outreach, специализирующийся на
@@ -307,6 +317,12 @@ async def make_mail(user, company):
 [user_company]
 
 
+так же напиши превью компании, в которые надо собрать все важные факты о ней, для быстрого экскурса в нее
+не забудь упомянуть о основных показателях компании, таких как выручка за прошлый год, численность сотрудников, а так же оставляй ссылку на сайт, если она есть
+использцуй для этого: {company.site}, {company.revenue_last_year} и {company.number_employees}
+оперируй фактами, не строй догадок
+
+
 общайся в официально-деловом стиле, но тем не менее используй простые слова, будь дружелюбным
 сделай письмо более уникализированным и человечным
 company_desc сформируй самостоятельно исходя из данных, которые у тебя есть
@@ -314,6 +330,7 @@ company_desc сформируй самостоятельно исходя из �
 Не используй никакое форматирвоание
 Не отправляй ничего кроме письма и темы для письма
 отвечай мне в фомате:
+Превью: [превью компании]
 Тема: [тема письма]
 Письмо: [текст письма]
         """
@@ -325,10 +342,13 @@ company_desc сформируй самостоятельно исходя из �
         ]
     )
     data = response.choices[0].message.content
-    return parse_email_text(data)
+    if not data:
+        raise ContentError
+    else:
+        return await parse_email_text(data)
 
 
-async def make_mail_lpr(user: object, company: object) -> object:
+async def make_mail_lpr(user: object, company: object) -> object:  # not used
     # TODO: rewrite prompt
     str = f"""
         Ты — Лида, эксперт по B2B email outreach, специализирующийся на написании цепочек писем для компаний. Ты знаешь все тонкости этого дела и умеешь писать письма так, чтобы выводить клиентов на звонок.
@@ -360,7 +380,7 @@ async def make_mail_lpr(user: object, company: object) -> object:
     return parse_email_text(data)
 
 
-async def parse_email_data(data: str) -> dict:
+async def parse_email_data(data: str) -> dict:  # not used
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -379,6 +399,7 @@ async def parse_email_data(data: str) -> dict:
     return parse_string(data)
 
 
+@gpt_error_handler
 async def parse_email_data_bin(data: str) -> dict:
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -392,5 +413,7 @@ async def parse_email_data_bin(data: str) -> dict:
     )
 
     data = response.choices[0].message.content
-
-    return parse_string(data)
+    if not data:
+        raise ContentError
+    else:
+        return parse_string(data)

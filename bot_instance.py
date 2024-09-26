@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import sys
 from aiogram.client.bot import DefaultBotProperties
+import logging
 
 sys.path.append(os.path.join(sys.path[0], 'lida'))
 
@@ -18,3 +19,11 @@ bot = Bot(
         parse_mode=ParseMode.HTML
     )
 )
+
+logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    )
+
+
+logger = logging.getLogger(__name__)

@@ -1,23 +1,32 @@
 from database.models import User, Company, User_x_Company, async_session
 from sqlalchemy import select, desc, distinct, and_, func
+from functools import wraps
+from error_handlers.errors import *
+from error_handlers.handlers import db_error_handler
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 
+@db_error_handler
 async def get_user(tg_id: int):
     async with async_session() as session:
         user = await session.scalar(select(User).where(User.tg_id == tg_id))
         if user:
             return user
         else:
-            print("Пользователь с таким id не найден")
             return "not created"
 
 
+@db_error_handler
 async def get_thread(tg_id: int) -> str:
     async with async_session() as session:
         user = await get_user(tg_id)
-        return user.thread
+        if user:
+            return user.thread
+        else:
+            raise Error404
 
 
+@db_error_handler
 async def create_user(tg_id: int, data: dict):
     async with async_session() as session:
         user = await get_user(tg_id)
@@ -27,14 +36,15 @@ async def create_user(tg_id: int, data: dict):
             session.add(user_data)
             await session.commit()
         else:
-            print("Пользователь с таким id уже существует")
+            raise Error409
 
 
+@db_error_handler
 async def update_user(tg_id: int, data: dict):
     async with async_session() as session:
         user = await get_user(tg_id)
         if user == 'not created':
-            print("Пользователь с таким id не найден")
+            raise Error404
         else:
             for key, value in data.items():
                 setattr(user, key, value)
@@ -42,40 +52,56 @@ async def update_user(tg_id: int, data: dict):
             await session.commit()
 
 
+@db_error_handler
 async def get_users_tg_id():
     async with async_session() as session:
         users_tg_id = await session.execute(select(distinct(User.tg_id)))
-        return users_tg_id.scalars().all()
+        users_tg_ids = users_tg_id.scalars().all()
+        if len(users_tg_ids) == 0:
+            raise Error404
+        return users_tg_ids
 
 
+@db_error_handler
 async def get_company_by_name(company_name: str):
     async with async_session() as session:
         company = await session.scalar(select(Company).where(Company.company_name == company_name))
-        return company
+        if company:
+            return company
+        else:
+            raise Error404
 
 
+@db_error_handler
 async def get_company_by_id(company_id: int):
     async with async_session() as session:
         company = await session.scalar(select(Company).where(Company.id == company_id))
-        return company
+        if company:
+            return company
+        else:
+            raise Error404
 
 
+@db_error_handler
 async def create_company(data: dict):   # in data must be company_name
     async with async_session() as session:
+        if data.get('company_name', 0) == 0:
+            raise CompanyNameError
         company = await get_company_by_name(data['company_name'])
         if not company:
             company_data = Company(**data)
             session.add(company_data)
             await session.commit()
         else:
-            print("Компания с таким именем уже существует")
+            raise Error409
 
 
+@db_error_handler
 async def update_company_by_name(company_name: str, data: dict):
     async with async_session() as session:
         company = await get_company_by_name(company_name)
         if not company:
-            print("Компания с таким именем не найдена")
+            raise Error404
         else:
             for key, value in data.items():
                 setattr(company, key, value)
@@ -83,11 +109,12 @@ async def update_company_by_name(company_name: str, data: dict):
             await session.commit()
 
 
+@db_error_handler
 async def update_company_by_id(company_id: int, data: dict):
     async with async_session() as session:
         company = await get_company_by_id(company_id)
         if not company:
-            print("Компания с таким id не найдена")
+            raise Error404
         else:
             for key, value in data.items():
                 setattr(company, key, value)
@@ -95,20 +122,23 @@ async def update_company_by_id(company_id: int, data: dict):
             await session.commit()
 
 
+@db_error_handler
 async def get_one_company(tg_id: int):
     async with async_session() as session:
         user = await get_user(tg_id)
+        if not user:
+            raise Error404
 
         subquery = select(User_x_Company.company_id).where(User_x_Company.user_id == tg_id).subquery()
         query = select(Company).outerjoin(subquery, Company.id == subquery.c.company_id).where(subquery.c.company_id.is_(None))
 
-        if len(user.target_okveds) > 0:
+        if len(user.target_okveds) > 0 and user.target_okveds[0] != '0':
             # query = query.where(Company.okveds.any(user.target_okveds))
             # query = query.filter(func.unnest(Company.okveds).in_(user.target_okveds))
             # query = query.filter(Company.okveds.op('&&')(user.target_okveds))
             query = query.where(Company.okveds.in_(user.target_okveds))  # check
 
-        if len(user.target_number_employees) > 0:  # need to check
+        if len(user.target_number_employees) > 0 and user.target_number_employees[0] != 0:
             if len(user.target_number_employees) == 1:
                 query = query.where(
                     and_(Company.number_employees >= user.target_number_employees[0]/4,
@@ -120,7 +150,7 @@ async def get_one_company(tg_id: int):
                          Company.number_employees <= user.target_number_employees[-1]*2)
                 )
 
-        if len(user.target_number_years_existence) > 0:  # need to check
+        if len(user.target_number_years_existence) > 0 and user.target_number_years_existence[0] != 0:
             if len(user.target_number_years_existence) == 1:
                 query = query.where(
                     and_(Company.number_years_existence >= user.target_number_years_existence[0]/4,
@@ -132,7 +162,7 @@ async def get_one_company(tg_id: int):
                          Company.number_years_existence <= user.target_number_years_existence[-1]*2)
                 )
 
-        if len(user.target_revenue_last_year) > 0:  # need to check
+        if len(user.target_revenue_last_year) > 0 and user.target_revenue_last_year[0] != 0:  # need to check
             if len(user.target_revenue_last_year) == 1:
                 query = query.where(
                     and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/4,
@@ -150,34 +180,42 @@ async def get_one_company(tg_id: int):
 
         result = await session.execute(query)
         data = result.scalars().first()
-        print('=====\n'*5, data, '\n', '=====\n'*5)
-        return data
+        if data:
+            # await session.close()
+            return data
+        # print('=====\n'*5, data, '\n', '=====\n'*5)
+        else:
+            raise FilterError(tg_id)
 
 
+@db_error_handler
 async def get_user_x_company_row_by_name(tg_id: int, company_name: str):
     async with async_session() as session:
         company = await get_company_by_name(company_name)
         if not company:
-            print("Компания с таким именем не найдена")
+            raise Error404
         company_id = company['id']
         row = await session.scalar(select(User_x_Company)
                                    .where(and_(User_x_Company.tg_id == tg_id, User_x_Company.id == company_id)))
         if row:
             return row
         else:
-            print("Запись с такими параметрами не найдена")
+            raise Error404
 
 
+@db_error_handler
 async def get_user_x_company_row_by_id(tg_id: int, company_id: int):
     async with async_session() as session:
-        row = await session.scalar(select(User_x_Company)
-                                   .where(and_(User_x_Company.user_id == tg_id, User_x_Company.company_id == company_id)))
+        print(tg_id, company_id)
+        row = await session.scalar(select(User_x_Company).where(and_(User_x_Company.user_id == tg_id, User_x_Company.company_id == company_id)))
+        print(row)
         if row:
             return row
         else:
-            print("Запись с такими параметрами не найдена")
+            raise Error404
 
 
+@db_error_handler
 async def create_user_x_row_by_id(tg_id: int, company_id: int):
     async with async_session() as session:
         row = await get_user_x_company_row_by_id(tg_id, company_id)
@@ -186,14 +224,15 @@ async def create_user_x_row_by_id(tg_id: int, company_id: int):
             session.add(row)
             await session.commit()
         else:
-            print("already exist")
+            raise Error409
 
 
+@db_error_handler
 async def update_user_x_row_by_id(tg_id: int, company_id: int, data):
     async with async_session() as session:
         row = await get_user_x_company_row_by_id(tg_id, company_id)
         if not row:
-            print("Запись с таким id не найдена")
+            raise Error404
         else:
             for key, value in data.items():
                 setattr(row, key, value)
@@ -201,21 +240,24 @@ async def update_user_x_row_by_id(tg_id: int, company_id: int, data):
             await session.commit()
 
 
+@db_error_handler
 async def get_user_x_row_by_status(tg_id: int, status: str):
     async with async_session() as session:
         row = await session.scalar(select(User_x_Company)
-                                   .where(and_(User_x_Company.user_id == tg_id, User_x_Company.status == status)))
+                                   .where(and_(User_x_Company.user_id == tg_id, User_x_Company.status == status))
+                                   .order_by(desc(User_x_Company.id)))
         if row:
             return row
         else:
-            print("Запись с такими параметрами не найдена")
+            raise Error404
 
 
+@db_error_handler
 async def update_user_x_row_by_status(tg_id: int, status: str, data: dict):
     async with async_session() as session:
         row = await get_user_x_row_by_status(tg_id, status)
         if not row:
-            print("Запись с таким статусом не найдена")
+            raise Error404
         else:
             for key, value in data.items():
                 setattr(row, key, value)
@@ -223,9 +265,13 @@ async def update_user_x_row_by_status(tg_id: int, status: str, data: dict):
             await session.commit()
 
 
+@db_error_handler
 async def get_all_rows_by_user(tg_id: int):
     async with async_session() as session:
         subquery = select(User_x_Company).where(User_x_Company.user_id == tg_id).subquery()
         query = select(Company, subquery).join(subquery, Company.id == subquery.c.company_id)
         result = await session.execute(query)
-        return result.all()
+        res = result.all()
+        if len(res) == 0:
+            raise Error404
+        return res

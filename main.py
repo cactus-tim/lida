@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from bot_instance import bot
 from confige import BotConfig
 from database.parse_company import csv_to_db
-from handlers import user, questionary_ai, mail
+from handlers import user, questionary_ai, mail, error
 from mails.mail_sender import loop
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,16 +19,11 @@ from database.models import async_main
 
 def register_routers(dp: Dispatcher) -> None:
     """Registers routers"""
-    dp.include_routers(user.router, questionary_ai.router, mail.router)
+    dp.include_routers(user.router, questionary_ai.router, mail.router, error.router)
 
 
 async def main() -> None:
     """Entry point of the program."""
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-    )
 
     await async_main()
 
@@ -50,6 +45,7 @@ async def main() -> None:
 
     try:
         # scheduler.start()
+        await loop()
         await dp.start_polling(bot, skip_updates=True)
     except Exception as _ex:
         print(f'Exception: {_ex}')

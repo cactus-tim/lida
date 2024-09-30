@@ -1,3 +1,5 @@
+import json
+
 from openai import OpenAI
 import os
 import re
@@ -10,6 +12,34 @@ from database.models import User
 load_dotenv('../.env')
 token = os.getenv('TOKEN_API_GPT')
 client = OpenAI(api_key=token)
+tokenP = os.getenv('TOKEN_API_PER')
+clientP = OpenAI(api_key=tokenP, base_url="https://api.perplexity.ai")
+
+
+@gpt_error_handler
+async def analyze_website(url: str):
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an artificial intelligence assistant and you need to "
+                "engage in a helpful, detailed, polite conversation with a user."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Получи информацию об описание компании, описание их основного продукта/услуги, последние новости за "
+                f"последний месяц {url}"
+            ),
+        },
+    ]
+
+    response = clientP.chat.completions.create(
+        model="llama-3.1-sonar-large-128k-online",
+        messages=messages,
+    )
+    return response.choices[0].message.content
 
 
 @parser_error_handler
@@ -289,63 +319,117 @@ async def parse_edits_data_1(data: str) -> dict:  # not used
 
 
 @gpt_error_handler
-async def make_mail(user, company):
+async def preprocess_data(data: str):
     str = f"""
-        Ты — Лида, эксперт по B2B email outreach, специализирующийся на
-написании продающих писем для компаний. Ты знаешь все тонкости этого дела и умеешь писать письма так, чтобы выводить клиентов на звонок.
+    additional promt for lida
 
-Твоя задача написать письмо для компании {company.company_name}, ее область деятельности {company.okveds} и инн - {company.inn}, а сайт {company.site}
-Если у копмании есть сайт, то возьми с него информацию о компании, а если нет, то сама найди ее в интернете
-Ты пишешь письмо от лица человека - его зовут {user.name} {user.surname}, он работает в {user.company_name} и занимает должность {user.jobtitle}, а его почта - {user.email}
-Твоя задача продать продукт - {user.product_name}, вот его описание {user.product_description} и проблемы, которые он решает {user.problem_solved}
+Твоя задача обработаь полученный текст и сформировать json объект и затем отпарвить его мне
+переменные в этом json объекте: 
+name, surname, email, tel, company_name, jobtitle, product_name, product_description, problem_solved, target_okveds, target_number_employees, target_number_years_existence, target_revenue_last_year, target_jobtitle
 
-Для самого письма используй следующую структуру
+обработка текста:
+name: str
+surname: str
+email: str
+tel: str
+company_name: str
+jobtitle: str
+product_name: str
+product_description: str
+problem_solved: str
+target_okveds: list(str), перед обработкой используя эту ссылку https://www.regfile.ru/okved2.html замени на номера окведов
+target_number_employees: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
+target_number_years_existence: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
+target_revenue_last_year: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен, сами числа запиши целиком, со всеми разрядами
+target_jobtitle: list(str)
 
-Здравствуйте,
+ответ отправь мне в формате json, не добавляя к нему каких либо комментариев
 
-Меня зовут [user_name], и я [user_jobtitle] в [user_company]. Меня искренне впечатляет company_desc
-
-Наша команда разработала продукт [user_product_name], который решает важные задачи, такие как [user_product_description]. Это позволяет добиться таких преимуществ, как [user_problem_solved]
-
-Пожалуйста, поделитесь со мной контактами или передайте это письмо лицу, с которым я могу обсудить как добиться ваших целей в бизнесе. 
-
-Заранее благодарю за помощь и надеюсь на дальнейшее сотрудничество!
-
-С уважением,
-[user_name]
-[user_jobtitle]
-[user_company]
-
-
-так же напиши превью компании, в которые надо собрать все важные факты о ней, для быстрого экскурса в нее
-не забудь упомянуть о основных показателях компании, таких как выручка за прошлый год, численность сотрудников, а так же оставляй ссылку на сайт, если она есть
-использцуй для этого: {company.site}, {company.revenue_last_year} и {company.number_employees}
-оперируй фактами, не строй догадок
-
-
-общайся в официально-деловом стиле, но тем не менее используй простые слова, будь дружелюбным
-сделай письмо более уникализированным и человечным
-company_desc сформируй самостоятельно исходя из данных, которые у тебя есть
-Не упоминай о сайте или иных источниках, откуда ты имеешь информацию о комании
-Не используй никакое форматирвоание
-Не отправляй ничего кроме письма и темы для письма
-отвечай мне в фомате:
-Превью: [превью компании]
-Тема: [тема письма]
-Письмо: [текст письма]
-        """
-
+{data}
+    """
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "user", "content": f"""{str}"""},
+            {"role": "user", "content": str},
         ]
     )
-    data = response.choices[0].message.content
+    res = response.choices[0].message.content
+    if not res:
+        raise ContentError
+    else:
+        return res
+
+
+@gpt_error_handler
+async def make_mail(user, company):
+    text = f"""
+    Твоя задача написать письмо для компании {company.company_name}, ее область деятельности {company.okveds} и инн - {company.inn}, а сайт {company.site}
+    Их выручка за прошлый год - {company.revenue_last_year} рублей, а количество сотрудников - {company.number_employees}
+    Ты пишешь письмо от лица человека - его зовут {user.name} {user.surname}, он работает в {user.company_name} и занимает должность {user.jobtitle}, а его почта - {user.email}
+    Твоя задача написать письмо о продукте: {user.product_name}, вот его описание {user.product_description} и проблемы, которые он решает {user.problem_solved}
+    В письме ты хочешь найти контакты человека на должности {user.target_jobtitle}  
+        """
+
+    thread = client.beta.threads.create()
+
+    message = client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=text
+    )
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread.id,
+        assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP',
+
+    )
+
+    while run.status != "completed":
+        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+        if run.status == "requires_action":
+            for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+                if tool_call.function.name == "analyze_website":
+                    url = json.loads(tool_call.function.arguments)['url']
+                    analysis_result = await analyze_website(url)
+                    client.beta.threads.runs.submit_tool_outputs(
+                        thread_id=thread.id,
+                        run_id=run.id,
+                        tool_outputs=[{
+                            "tool_call_id": tool_call.id,
+                            "output": analysis_result
+                        }]
+                    )
+
+    messages = client.beta.threads.messages.list(
+        thread_id=thread.id
+    )
+
+    data = messages.data[0].content[0].text.value
     if not data:
         raise ContentError
     else:
         return await parse_email_text(data)
+
+
+@gpt_error_handler
+async def assystent_questionnary(thread_id, mes="давай начнем", assistant_id='asst_gx0OWMBDg3kA2pkHyUHIGTJs'):
+    message = client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=mes
+    )
+
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread_id,
+        assistant_id=assistant_id,
+    )
+
+    messages = client.beta.threads.messages.list(thread_id=thread_id)
+    data = messages.data[0].content[0].text.value.strip()
+    print(messages)
+    if not data:
+        return ContentError
+    else:
+        return data
 
 
 async def make_mail_lpr(user: object, company: object) -> object:  # not used

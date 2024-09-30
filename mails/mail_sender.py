@@ -1,7 +1,4 @@
-import smtplib
 from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import imaplib
 import email
 from email.header import decode_header
 
@@ -38,6 +35,7 @@ async def mail_start(user_tg_id: int):
     await update_user_x_row_by_id(user_tg_id, company.id, {'comment': mail})
     await safe_send_message(bot, user_tg_id, text=f"Для компании {company.company_name} я подготовила письмо:\n"
                                                   f"Кратокое описании компании:\n{mail['prev']}\n\n\n"
+                                                  f"Тема письма: {mail['theme']}\n"
                                                   f"Письмо:\n\n{mail['text']}",
                             reply_markup=get_mail_ikb_full())
 
@@ -45,7 +43,7 @@ async def mail_start(user_tg_id: int):
 async def loop():
     # data = {
     #     'company_name': 'tim_company',
-    #     'okveds': ['1', '2'],
+    #     'okveds': '62.01',
     #     'inn': 22222,
     #     'number_employees': 111,
     #     'number_years_existence': 11,
@@ -61,7 +59,7 @@ async def loop():
     #     'lpr_tel': '33333',
     # }
     # await create_company(data)
-    # await update_user(483458201,{'is_active': True})
+    await update_user(483458201, {'is_active': True})
 
     user_tg_ids = await get_users_tg_id()
     for user_tg_id in user_tg_ids:
@@ -74,7 +72,7 @@ async def loop():
 async def send_stat(user_tg_id: int):
     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
-    msg = 'Лимит сообщений на сегодня исчерпан\n'
+    msg = 'Текущая статистика отправленных писем\n'
     rows = await get_all_rows_by_user(user_tg_id)
     for row in rows:
         company = await get_company_by_id(row.company_id)
@@ -133,14 +131,14 @@ async def send_mail(theme, mail, to_email):
     msg['To'] = to_email
     msg['Subject'] = theme
     msg.attach(MIMEText(body, 'plain'))
-    try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(login, password)
-        server.sendmail(login, to_email, msg.as_string())
-        server.quit()
-    except Exception as e:
-        print(f"Ошибка при отправке письма: {e}")
+
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.starttls()
+    server.login(login, password)
+    print('kk')
+    server.sendmail(login, to_email, msg.as_string())
+    print('aa')
+    server.quit()
 
 
 async def decode_mime_words(s):

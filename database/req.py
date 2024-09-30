@@ -69,7 +69,7 @@ async def get_company_by_name(company_name: str):
         if company:
             return company
         else:
-            raise Error404
+            return 'not created'
 
 
 @db_error_handler
@@ -79,7 +79,7 @@ async def get_company_by_id(company_id: int):
         if company:
             return company
         else:
-            raise Error404
+            return 'not created'
 
 
 @db_error_handler
@@ -88,7 +88,7 @@ async def create_company(data: dict):   # in data must be company_name
         if data.get('company_name', 0) == 0:
             raise CompanyNameError
         company = await get_company_by_name(data['company_name'])
-        if not company:
+        if company == 'not created':
             company_data = Company(**data)
             session.add(company_data)
             await session.commit()
@@ -100,7 +100,7 @@ async def create_company(data: dict):   # in data must be company_name
 async def update_company_by_name(company_name: str, data: dict):
     async with async_session() as session:
         company = await get_company_by_name(company_name)
-        if not company:
+        if company == 'not created':
             raise Error404
         else:
             for key, value in data.items():
@@ -192,7 +192,7 @@ async def get_one_company(tg_id: int):
 async def get_user_x_company_row_by_name(tg_id: int, company_name: str):
     async with async_session() as session:
         company = await get_company_by_name(company_name)
-        if not company:
+        if company == 'not created':
             raise Error404
         company_id = company['id']
         row = await session.scalar(select(User_x_Company)

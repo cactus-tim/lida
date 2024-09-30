@@ -12,7 +12,7 @@ import io
 from bot_instance import bot, logger
 from gpt.gpt_parsers import client, parse_user_data, parse_product_data, parse_edits_data, parse_company_data, \
     parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, \
-    parse_target_company_jobtitle, generate_message, parse_edits_data_1
+    parse_target_company_jobtitle, generate_message, parse_edits_data_1, preprocess_data, assystent_questionnary
 from database.req import create_user, update_user, get_thread
 from keyboards.keyboards import get_data_ikb
 from error_handlers.handlers import gpt_error_handler
@@ -25,7 +25,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter, TelegramU
 router = Router()
 
 
-def clean_json_string(json_string):
+async def clean_json_string(json_string):
     start_index = json_string.find("{")
     end_index = json_string.rfind("}") + 1
     if start_index != -1 and end_index != -1:
@@ -57,19 +57,7 @@ async def cmd_quest(callback: F.CallbackQuery):
     else:
         await update_user(callback.from_user.id, {'thread': thread.id, 'is_active': False})
 
-    message = client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content="давай начнем\nне приветствуй меня, просто начни диалог"
-    )
-
-    run = client.beta.threads.runs.create_and_poll(
-        thread_id=thread_id,
-        assistant_id='asst_gx0OWMBDg3kA2pkHyUHIGTJs',
-    )
-
-    messages = client.beta.threads.messages.list(thread_id=thread_id)
-    data = messages.data[0].content[0].text.value.strip()
+    data = await assystent_questionnary(thread_id)
     await safe_send_message(bot, callback, text=data, reply_markup=ReplyKeyboardRemove())
 
 
@@ -109,23 +97,10 @@ async def gpt_handler(message: Message):
     else:
         thread_id = await get_thread(user_id)
 
-    # mb make error handler here
-
-    resp = client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=user_message
-    )
-
-    run = client.beta.threads.runs.create_and_poll(
-        thread_id=thread_id,
-        assistant_id='asst_gx0OWMBDg3kA2pkHyUHIGTJs',
-    )
-
-    messages = client.beta.threads.messages.list(thread_id=thread_id)
-    data = messages.data[0].content[0].text.value.strip()
-    if data.count('{') > 0 and data.count('}') > 0:
-        cleaned_text = clean_json_string(data)
+    data = await assystent_questionnary(thread_id, user_message)
+    if data[0:6] == 'Готово':
+        data_json = await preprocess_data(data)
+        cleaned_text = await clean_json_string(data_json)
         data_to_db = json.loads(cleaned_text)
         data_to_db['is_active'] = True
         # if you need you can here cut okveds

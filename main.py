@@ -40,12 +40,12 @@ async def main() -> None:
 
     scheduler = AsyncIOScheduler()
 
-    scheduler.add_job(loop, 'interval', hours=24, start_date=datetime.now() + timedelta(seconds=5),
+    scheduler.add_job(loop, 'interval', seconds=180, start_date=datetime.now() + timedelta(seconds=5),
                       id='loop')
 
     try:
-        # scheduler.start()
-        await loop()
+        scheduler.start()
+        # await loop()
         await dp.start_polling(bot, skip_updates=True)
     except Exception as _ex:
         print(f'Exception: {_ex}')

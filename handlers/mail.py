@@ -59,5 +59,6 @@ async def cmd_mail_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
     await update_user_x_row_by_status(callback.from_user.id, 'requested', {'comment': mail})
     await safe_send_message(bot, callback, text=f"Для компании {company.company_name} я подготовила письмою\n"
                                                 f"Кратокое описании компании:\n{mail['prev']}\n\n\n"
+                                                f"Тема письма: {mail['theme']}\n"
                                                 f"Письмо:\n\n{mail['text']}",
                             reply_markup=get_mail_ikb())

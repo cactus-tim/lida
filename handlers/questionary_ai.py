@@ -1,26 +1,15 @@
-from aiogram import Router, F, types
-import asyncio
-from aiogram.filters import Command, StateFilter
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardRemove
-from aiogram.enums import ParseMode
-from handlers.error import safe_send_message
 import json
 import io
 
-from bot_instance import bot, logger
-from gpt.gpt_parsers import client, parse_user_data, parse_product_data, parse_edits_data, parse_company_data, \
-    parse_target_company_scope, parse_target_company_employe, parse_target_company_age, parse_target_company_money, \
-    parse_target_company_jobtitle, generate_message, parse_edits_data_1, preprocess_data, assystent_questionnary
+from handlers.error import safe_send_message
+from bot_instance import bot
+from gpt.gpt_parsers import client, preprocess_data, assystent_questionnary
 from database.req import create_user, update_user, get_thread
 from keyboards.keyboards import get_data_ikb
-from error_handlers.handlers import gpt_error_handler
-
 from database.req import get_user
-from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter, TelegramUnauthorizedError, TelegramNetworkError
 
-# from database import requests as rq
 
 router = Router()
 
@@ -35,7 +24,8 @@ async def clean_json_string(json_string):
 
 
 @router.callback_query(F.data == "data")
-async def cmd_data(callback: F.CallbackQuery, state: FSMContext):
+async def cmd_data(callback: F.CallbackQuery):
+    await callback.message.delete()
     await safe_send_message(bot, callback,
                             text="Чтобы я смогла это сделать, я проведу вас по 5 шагам:\n"
                                  "Шаг 1: Я попрошу вас рассказать о себе и о вашем бизнесе/продукте.\n"
@@ -49,6 +39,7 @@ async def cmd_data(callback: F.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "quest")
 async def cmd_quest(callback: F.CallbackQuery):
+    await callback.message.delete()
     user = await get_user(callback.from_user.id)
     thread = client.beta.threads.create()
     thread_id = thread.id
@@ -106,15 +97,16 @@ async def gpt_handler(message: Message):
         # if you need you can here cut okveds
         await update_user(user_id, data_to_db)
         await safe_send_message(bot, message, text="Отлично! Я заполнила всю информацию и приступила к поиску "
-                                                   "подходящих компаний."
+                                                   "подходящих компаний. "
                                                    "Ежедневно я буду находить 10 таких компаний и составлять для них "
-                                                   "персонализированные письма от вашего имени."
+                                                   "персонализированные письма от вашего имени. "
                                                    "Каждое письмо и компанию я согласую с вами. "
-                                                   "У вас будет возможность отменить отправку письма, отправить его или"
-                                                   "отредактировать любую часть."
-                                                   "Как только компания ответит, я немедленно перешлю вам их ответ.\n\n"
+                                                   "У вас будет возможность отменить отправку письма, отправить его "
+                                                   "или отредактировать любую часть. "
+                                                   "Каждый день, после отправки всех писем, я буду отправлять вам а"
+                                                   "ктуальную информацию касаемо каждого письма.\n\n"
                                                    "Если вы хотите заново заполнить информацию о своей компании и "
-                                                   "продукте,"
+                                                   "продукте, "
                                                    "просто введите команду /start.")
     else:
         await safe_send_message(bot, message, text=data)

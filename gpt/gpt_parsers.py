@@ -1,12 +1,11 @@
 import json
-
 from openai import OpenAI
 import os
 import re
 from dotenv import load_dotenv
+
 from error_handlers.errors import *
 from error_handlers.handlers import gpt_error_handler, parser_error_handler
-
 from database.models import User
 
 load_dotenv('../.env')
@@ -321,8 +320,6 @@ async def parse_edits_data_1(data: str) -> dict:  # not used
 @gpt_error_handler
 async def preprocess_data(data: str):
     str = f"""
-    additional promt for lida
-
 Твоя задача обработаь полученный текст и сформировать json объект и затем отпарвить его мне
 переменные в этом json объекте: 
 name, surname, email, tel, company_name, jobtitle, product_name, product_description, problem_solved, target_okveds, target_number_employees, target_number_years_existence, target_revenue_last_year, target_jobtitle
@@ -337,7 +334,7 @@ jobtitle: str
 product_name: str
 product_description: str
 problem_solved: str
-target_okveds: list(str), перед обработкой используя эту ссылку https://www.regfile.ru/okved2.html замени на номера окведов
+target_okveds: list(str), перед обработкой используя эту ссылку https://www.regfile.ru/okved2.html замени на номера окведов, не обрезай их, пиши полные номера
 target_number_employees: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
 target_number_years_existence: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
 target_revenue_last_year: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен, сами числа запиши целиком, со всеми разрядами

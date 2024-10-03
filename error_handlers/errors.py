@@ -1,10 +1,3 @@
-import openai
-from openai import OpenAIError, APIError, RateLimitError, AuthenticationError, APIConnectionError
-from email.mime.text import MIMEText
-import smtplib
-import imaplib
-
-
 class CustomError(Exception):
     pass
 

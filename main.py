@@ -1,19 +1,15 @@
 import asyncio
 import logging
-
 from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-
-from bot_instance import bot
 from confige import BotConfig
-from database.parse_company import csv_to_db
-from handlers import user, questionary_ai, mail, error
-from mails.mail_sender import loop
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta
 
-
+from bot_instance import bot
+from database.parse_company import csv_to_db
+from handlers import user, questionary_ai, mail, error
+from mails.mail_sender import loop, test_mail
 from database.models import async_main
 
 
@@ -40,12 +36,11 @@ async def main() -> None:
 
     scheduler = AsyncIOScheduler()
 
-    scheduler.add_job(loop, 'interval', seconds=180, start_date=datetime.now() + timedelta(seconds=5),
+    scheduler.add_job(loop, 'interval', seconds=86400, start_date=datetime.now() + timedelta(seconds=5),
                       id='loop')
 
     try:
         scheduler.start()
-        # await loop()
         await dp.start_polling(bot, skip_updates=True)
     except Exception as _ex:
         print(f'Exception: {_ex}')

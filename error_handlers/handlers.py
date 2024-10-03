@@ -1,11 +1,10 @@
 import asyncio
 from functools import wraps
 import time
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 from error_handlers.errors import *
 from bot_instance import logger
 from bot_instance import bot
-
 from handlers.error import safe_send_message
 
 

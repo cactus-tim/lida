@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Float, Numeric, JSON, Text
-from sqlalchemy.dialects.mysql import FLOAT
+from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Numeric, JSON
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
 from bot_instance import SQL_URL_RC
@@ -25,12 +24,6 @@ class User(Base):
     product_name = Column(String, default="")
     product_description = Column(String, default="")
     problem_solved = Column(String, default="")
-    # scope_company = Column(String, default="")
-    # what_creating = Column(String, default="")
-    # number_years_existence = Column(Integer, default=0)
-    # number_employees = Column(Integer, default=0)
-    # revenue_last_year = Column(Numeric, default=0)
-    # life_cycle_stage = Column(String, default="")
     target_okveds = Column(ARRAY(String), default=list)
     target_number_employees = Column(ARRAY(Integer), default=list)
     target_number_years_existence = Column(ARRAY(Integer), default=list)
@@ -39,7 +32,6 @@ class User(Base):
     is_active = Column(Boolean, default=False)
     cnt = Column(Integer, default=0)
     thread = Column(String, default='')
-    # past_using_time = Column(DateTime, default=datetime.utcnow)
 
     companies = relationship("User_x_Company", back_populates="user")
 

@@ -1,19 +1,18 @@
+import imaplib
 from email.mime.multipart import MIMEMultipart
 import email
+import smtplib
 from email.header import decode_header
-
-from aiogram.enums import ParseMode
+from email.mime.text import MIMEText
 from aiogram.types import ReplyKeyboardRemove
 
 from error_handlers.handlers import mail_error_handler
-
 from bot_instance import bot
 from mails.lida_instance import login, password
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
-    create_company, get_company_by_id, get_all_rows_by_user, update_user
+    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail, parse_email_data_bin
-from error_handlers.errors import *
 from handlers.error import safe_send_message
 
 
@@ -21,23 +20,33 @@ async def mail_start(user_tg_id: int):
     user = await get_user(user_tg_id)
     if user.cnt >= 10:
         await send_stat(user_tg_id)
+        return None
     company = await get_one_company(user_tg_id)
     if not company:
         return None
     # company = await get_company_by_id(1)
     await create_user_x_row_by_id(user_tg_id, company.id)
+    msg = await safe_send_message(bot, user_tg_id, "Пишем письмо...")
     mail = await make_mail(user, company)
-    print(mail)
     if not mail:
         await safe_send_message(bot, user_tg_id, text=" У нас какие то проблемы, попробуйте пожалуйста позже")
         await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
         return None
     await update_user_x_row_by_id(user_tg_id, company.id, {'comment': mail})
+    await bot.delete_message(chat_id=user_tg_id, message_id=msg.message_id)
     await safe_send_message(bot, user_tg_id, text=f"Для компании {company.company_name} я подготовила письмо:\n"
                                                   f"Кратокое описании компании:\n{mail['prev']}\n\n\n"
-                                                  f"Тема письма: {mail['theme']}\n"
+                                                  f"Тема письма: {mail['theme']}\n\n"
                                                   f"Письмо:\n\n{mail['text']}",
                             reply_markup=get_mail_ikb_full())
+
+
+async def test_mail():
+    row = await get_user_x_row_by_status(483458201, "requested")
+    company = await get_company_by_id(row.company_id)
+    theme = row.comment['theme']
+    text = row.comment['text']
+    await send_mail(theme, text, company.company_mail)
 
 
 async def loop():
@@ -59,13 +68,13 @@ async def loop():
     #     'lpr_tel': '33333',
     # }
     # await create_company(data)
-    await update_user(483458201, {'is_active': True})
+    # await update_user(483458201, {'is_active': True})
 
     user_tg_ids = await get_users_tg_id()
     for user_tg_id in user_tg_ids:
         user = await get_user(user_tg_id)
         if user.is_active:
-            # await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
+            await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
             await mail_start(user_tg_id)
 
 
@@ -107,16 +116,16 @@ async def send_stat(user_tg_id: int):
                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
                     msg += f"Рпл компании {company.company_name} к сожалению отклонил наше письмо\n"
             else:
-                msg += f"Ожидаем ответ от рпла компании {company.company_name}, вот его почта {company.lpr_mail}\n"
+                msg += f"Ожидаем ответ от рпла компании {company.company_name}, вот его почта {company.company_mail}\n"
             pass
-        elif row.status == 'company_rejected_by_user':
-            msg += f"Вы отклонили компанию {company.company_name}\n"
+        # elif row.status == 'company_rejected_by_user':
+            # msg += f"Вы отклонили компанию {company.company_name}\n"
         # elif row['status'] == 'rejected_by_company':
         #     msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
         elif row['status'] == 'rejected_by_rpl':
-            msg += f"Рпл компании {company.name} к сожалению отклонил наше письмо\n"
+            msg += f"Рпл компании {company.compamy_name} к сожалению отклонил наше письмо\n"
         elif row['status'] == 'lead':
-            msg += f"Лпр комании {company.name} подтвердил контакт, вот его номер для связи {company.lpr_tel}"
+            msg += f"Лпр комании {company.compamy_name} подтвердил контакт, вот его номер для связи {company.lpr_tel}"
     await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove(),)
 
 

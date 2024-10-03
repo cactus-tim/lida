@@ -1,13 +1,11 @@
-from aiogram import Router, F, types, Bot
+from aiogram import Router, types, Bot
 import asyncio
-
-from aiogram.types import ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardRemove, Message
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter, TelegramUnauthorizedError, TelegramNetworkError
 
 from bot_instance import logger, bot
 from aiohttp import ClientConnectorError
-
-from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter, TelegramUnauthorizedError, TelegramNetworkError
 
 
 router = Router()
@@ -35,21 +33,21 @@ async def global_error_handler(update: types.Update, exception: Exception):
         return True
 
 
-async def safe_send_message(bott: Bot, recipient, text: str, reply_markup=ReplyKeyboardRemove(), retry_attempts=3, delay=5):
+async def safe_send_message(bott: Bot, recipient, text: str, reply_markup=ReplyKeyboardRemove(), retry_attempts=3, delay=5) -> Message:
     """Отправка сообщения с обработкой ClientConnectorError, поддержкой reply_markup и выбором метода отправки."""
 
     for attempt in range(retry_attempts):
         try:
             if isinstance(recipient, types.Message):
-                await recipient.answer(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+                msg = await recipient.answer(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
             elif isinstance(recipient, types.CallbackQuery):
-                await recipient.message.answer(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+                msg = await recipient.message.answer(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
             elif isinstance(recipient, int):
-                await bott.send_message(chat_id=recipient, text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+                msg = await bott.send_message(chat_id=recipient, text=text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
             else:
                 raise TypeError(f"Неподдерживаемый тип recipient: {type(recipient)}")
 
-            return
+            return msg
 
         except ClientConnectorError as e:
             logger.error(f"Ошибка подключения: {e}. Попытка {attempt + 1} из {retry_attempts}.")

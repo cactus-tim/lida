@@ -1,9 +1,8 @@
+from sqlalchemy import select, desc, distinct, and_
+
 from database.models import User, Company, User_x_Company, async_session
-from sqlalchemy import select, desc, distinct, and_, func
-from functools import wraps
 from error_handlers.errors import *
 from error_handlers.handlers import db_error_handler
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 
 @db_error_handler
@@ -133,10 +132,7 @@ async def get_one_company(tg_id: int):
         query = select(Company).outerjoin(subquery, Company.id == subquery.c.company_id).where(subquery.c.company_id.is_(None))
 
         if len(user.target_okveds) > 0 and user.target_okveds[0] != '0':
-            # query = query.where(Company.okveds.any(user.target_okveds))
-            # query = query.filter(func.unnest(Company.okveds).in_(user.target_okveds))
-            # query = query.filter(Company.okveds.op('&&')(user.target_okveds))
-            query = query.where(Company.okveds.in_(user.target_okveds))  # check
+            query = query.where(Company.okveds.in_(user.target_okveds))
 
         if len(user.target_number_employees) > 0 and user.target_number_employees[0] != 0:
             if len(user.target_number_employees) == 1:
@@ -174,16 +170,10 @@ async def get_one_company(tg_id: int):
                          Company.revenue_last_year <= user.target_revenue_last_year[-1]*2)
                 )
 
-        # if len(user.target_jobtitle) > 0:
-        #     if len(user.target_jobtitle) == 1:
-        #         query = query.where(Company.target_jobtitle == user.target_jobtitle)
-
         result = await session.execute(query)
         data = result.scalars().first()
         if data:
-            # await session.close()
             return data
-        # print('=====\n'*5, data, '\n', '=====\n'*5)
         else:
             raise FilterError(tg_id)
 
@@ -206,9 +196,7 @@ async def get_user_x_company_row_by_name(tg_id: int, company_name: str):
 @db_error_handler
 async def get_user_x_company_row_by_id(tg_id: int, company_id: int):
     async with async_session() as session:
-        print(tg_id, company_id)
         row = await session.scalar(select(User_x_Company).where(and_(User_x_Company.user_id == tg_id, User_x_Company.company_id == company_id)))
-        print(row)
         if row:
             return row
         else:

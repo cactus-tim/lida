@@ -5,8 +5,7 @@ import openpyxl
 
 from database.req import create_company
 
-file_path = '/Users/timofejsosnin/Downloads/Lida24.09_as.xlsx' #path to .csv file on your computer
-# companies_df = pd.read_csv(file_path)
+file_path = '/Users/timofejsosnin/Downloads/Lida24.09_as.xlsx'  # path to .csv file on your computer
 
 
 async def csv_to_db_nu():
@@ -70,7 +69,6 @@ async def csv_to_db_nu_1():
             await create_company(data)
         except Exception as e:
             print("=====\n"*3, e, '\n', "=====\n"*3)
-
 
 
 async def csv_to_db():

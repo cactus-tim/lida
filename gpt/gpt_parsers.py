@@ -486,8 +486,8 @@ async def parse_email_data_bin(data: str) -> dict:
         model="gpt-4o",
         messages=[
             {"role": "user", "content": f"""{data}
-             это письмо от компании, которой я заинтересован продать свое бизнес решение, проанализируй его, твоя задача понять, заинтересована ли она в интеграции моего решения\n
-             если не заинтересована, то отправь мне одно слово - no
+             это текст письма от компании, неважно на сколько оно короткое, которой я заинтересован продать свое бизнес решение, проанализируй его, твоя задача понять, заинтересована ли она в интеграции моего решения\n
+             если ты не можешь понять, заинтересовен ли человек, или если он не заинтересован отправь - no
              в противном случае - yes
           """},
         ]
@@ -496,5 +496,17 @@ async def parse_email_data_bin(data: str) -> dict:
     data = response.choices[0].message.content
     if not data:
         raise ContentError
+
+    res = {}
+    if data.strip() == "no":
+        res["no"] = "no"
+        return res
+    if data.strip() == "yes":
+        res["yes"] = "yes"
+        return res
     else:
-        return parse_string(data)
+        raise ParseError
+
+    # loop = asyncio.get_running_loop()
+    # parsed_data = await loop.run_in_executor(None, parse_string, data)
+    # return parsed_data

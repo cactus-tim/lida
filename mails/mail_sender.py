@@ -51,7 +51,7 @@ async def test_mail():
 
 async def loop():
     # data = {
-    #     'company_name': 'tim_company',
+    #     'company_name': 'tim_company2',
     #     'okveds': '62.01',
     #     'inn': 22222,
     #     'number_employees': 111,
@@ -114,7 +114,7 @@ async def send_stat(user_tg_id: int):
                     msg += f"Лпр комании {company.company_name} подтвердил контакт, направила его письмо вам на почту"
                 else:
                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
-                    msg += f"Рпл компании {company.company_name} к сожалению отклонил наше письмо\n"
+                    msg += f"Лпр компании {company.company_name} к сожалению отклонил наше письмо\n"
             else:
                 msg += f"Ожидаем ответ от рпла компании {company.company_name}, вот его почта {company.company_mail}\n"
             pass
@@ -122,10 +122,10 @@ async def send_stat(user_tg_id: int):
             # msg += f"Вы отклонили компанию {company.company_name}\n"
         # elif row['status'] == 'rejected_by_company':
         #     msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
-        elif row['status'] == 'rejected_by_rpl':
-            msg += f"Рпл компании {company.compamy_name} к сожалению отклонил наше письмо\n"
-        elif row['status'] == 'lead':
-            msg += f"Лпр комании {company.compamy_name} подтвердил контакт, вот его номер для связи {company.lpr_tel}"
+        elif row.status == 'rejected_by_rpl':
+            msg += f"Лпр компании {company.company_name} к сожалению отклонил наше письмо\n"
+        elif row.status == 'lead':
+            msg += f"Лпр комании {company.company_name} подтвердил контакт"
     await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove(),)
 
 
@@ -134,9 +134,9 @@ async def send_mail(theme, mail, to_email):
     theme = theme
     body = mail
     smtp_server = "smtp.timeweb.ru"
-    smtp_port = 587
+    smtp_port = 2525
     msg = MIMEMultipart()
-    msg['From'] = 'lida.ai@test50funnels.ru'
+    msg['From'] = 'lida.ai@claricont.ru'
     msg['To'] = to_email
     msg['Subject'] = theme
     msg.attach(MIMEText(body, 'plain'))

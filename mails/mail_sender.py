@@ -1,4 +1,5 @@
 import imaplib
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 import email
 import smtplib
@@ -10,7 +11,7 @@ from error_handlers.handlers import mail_error_handler
 from bot_instance import bot
 from mails.lida_instance import login, password
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
-    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status
+    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, get_all_rows_by_user_w_date
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail, parse_email_data_bin
 from handlers.error import safe_send_message
@@ -51,7 +52,7 @@ async def test_mail():
 
 async def loop():
     # data = {
-    #     'company_name': 'tim_company',
+    #     'company_name': 'tim_company2',
     #     'okveds': '62.01',
     #     'inn': 22222,
     #     'number_employees': 111,
@@ -79,54 +80,85 @@ async def loop():
 
 
 async def send_stat(user_tg_id: int):
+    cnt = 0
+    cnt1 = 0
     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
-    msg = 'Текущая статистика отправленных писем\n'
+    msg = '📊 Итоги дня:\n\n📨 Сегодня отправлено писем: '
+    stat = '🥳 Новые успешные контакты:\n'
+    rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
+    msg += f'{len(rows)}\n\n📬 Ожидаем ответы: '
     rows = await get_all_rows_by_user(user_tg_id)
     for row in rows:
-        company = await get_company_by_id(row.company_id)
-        # if row['status'] == 'waiting_rpl_contact':
-        #     mail = await get_latest_email_by_sender(row['company_mail'])
-        #     if mail != 'not found':
-        #         data = await parse_email_data(mail)
-        #         if data.get('no', 0) == 0:
-        #             await update_company_by_id(row['company_id'], data) # need to test
-        #             mail_to_sand = await make_mail_lpr(user, company)
-        #             if company['lpr_mail'] != '':
-        #                 await send_mail(mail_to_sand, company['lpr_mail'])
-        #             await update_user_x_row_by_id({'status': 'waiting_rpl_ans', 'comment': mail})
-        #             msg += f"Ожидаем ответ от рпла компании {row['lpr_mail']}, вот его почта {row['lpr_mail']}\n"
-        #         else:
-        #             await update_user_x_row_by_id({'status': 'rejected_by_company'})
-        #             msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
-        #     else:
-        #         msg += f"Ожидаем контакты рпла от компании {row['lpr_mail']}\n"
         if row.status == 'waiting_rpl_ans':
+            cnt1 += 1
+            company = await get_company_by_id(row.company_id)
             mail = await get_latest_email_by_sender(company.company_mail)
             if mail['theme'] != 'not found':
                 data = await parse_email_data_bin(mail['text'])
                 if data.get('no', 0) == 0:
-                    theme = mail['theme']
-                    text = mail['text']
-                    await send_mail(theme, text, user.email)
+                    await send_mail(mail['theme'], mail['text'], user.email)
                     await update_user_x_row_by_id(user_tg_id, row.company_id,
                                                   {'status': 'lead', 'comment': mail})
-                    msg += f"Лпр комании {company.company_name} подтвердил контакт, направила его письмо вам на почту"
+                    cnt += 1
+                    stat += f' - 🟢 {company.company_name} — Клиент проявил интерес.\n   👉 Я переслала вам это письмо на ваш e-mail. Рекомендую ответить как можно скорее!\n\n'
                 else:
                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
-                    msg += f"Рпл компании {company.company_name} к сожалению отклонил наше письмо\n"
-            else:
-                msg += f"Ожидаем ответ от рпла компании {company.company_name}, вот его почта {company.company_mail}\n"
-            pass
-        # elif row.status == 'company_rejected_by_user':
-            # msg += f"Вы отклонили компанию {company.company_name}\n"
-        # elif row['status'] == 'rejected_by_company':
-        #     msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
-        elif row['status'] == 'rejected_by_rpl':
-            msg += f"Рпл компании {company.compamy_name} к сожалению отклонил наше письмо\n"
-        elif row['status'] == 'lead':
-            msg += f"Лпр комании {company.compamy_name} подтвердил контакт, вот его номер для связи {company.lpr_tel}"
+
+    msg += f'{cnt1-cnt} компаний\n\n'
+    msg += stat
     await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove(),)
+
+
+# async def send_stat_nu(user_tg_id: int):
+#     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
+#     user = await get_user(user_tg_id)
+#     msg = 'Текущая статистика отправленных писем\n'
+#     rows = await get_all_rows_by_user(user_tg_id)
+#     for row in rows:
+#         company = await get_company_by_id(row.company_id)
+#         # if row['status'] == 'waiting_rpl_contact':
+#         #     mail = await get_latest_email_by_sender(row['company_mail'])
+#         #     if mail != 'not found':
+#         #         data = await parse_email_data(mail)
+#         #         if data.get('no', 0) == 0:
+#         #             await update_company_by_id(row['company_id'], data) # need to test
+#         #             mail_to_sand = await make_mail_lpr(user, company)
+#         #             if company['lpr_mail'] != '':
+#         #                 await send_mail(mail_to_sand, company['lpr_mail'])
+#         #             await update_user_x_row_by_id({'status': 'waiting_rpl_ans', 'comment': mail})
+#         #             msg += f"Ожидаем ответ от рпла компании {row['lpr_mail']}, вот его почта {row['lpr_mail']}\n"
+#         #         else:
+#         #             await update_user_x_row_by_id({'status': 'rejected_by_company'})
+#         #             msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
+#         #     else:
+#         #         msg += f"Ожидаем контакты рпла от компании {row['lpr_mail']}\n"
+#         if row.status == 'waiting_rpl_ans':
+#             mail = await get_latest_email_by_sender(company.company_mail)
+#             if mail['theme'] != 'not found':
+#                 data = await parse_email_data_bin(mail['text'])
+#                 if data.get('no', 0) == 0:
+#                     theme = mail['theme']
+#                     text = mail['text']
+#                     await send_mail(theme, text, user.email)
+#                     await update_user_x_row_by_id(user_tg_id, row.company_id,
+#                                                   {'status': 'lead', 'comment': mail})
+#                     msg += f"Лпр комании {company.company_name} подтвердил контакт, направила его письмо вам на почту"
+#                 else:
+#                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
+#                     msg += f"Лпр компании {company.company_name} к сожалению отклонил наше письмо\n"
+#             else:
+#                 msg += f"Ожидаем ответ от рпла компании {company.company_name}, вот его почта {company.company_mail}\n"
+#             pass
+#         # elif row.status == 'company_rejected_by_user':
+#             # msg += f"Вы отклонили компанию {company.company_name}\n"
+#         # elif row['status'] == 'rejected_by_company':
+#         #     msg += f"Компания {row['name']} к сожалению отклонила наше письмо\n"
+#         elif row.status == 'rejected_by_rpl':
+#             msg += f"Лпр компании {company.company_name} к сожалению отклонил наше письмо\n"
+#         elif row.status == 'lead':
+#             msg += f"Лпр комании {company.company_name} подтвердил контакт"
+#     await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove(),)
 
 
 @mail_error_handler
@@ -134,9 +166,9 @@ async def send_mail(theme, mail, to_email):
     theme = theme
     body = mail
     smtp_server = "smtp.timeweb.ru"
-    smtp_port = 587
+    smtp_port = 2525
     msg = MIMEMultipart()
-    msg['From'] = 'lida.ai@test50funnels.ru'
+    msg['From'] = 'lida.ai@claricont.ru'
     msg['To'] = to_email
     msg['Subject'] = theme
     msg.attach(MIMEText(body, 'plain'))

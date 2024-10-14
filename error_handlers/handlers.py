@@ -1,6 +1,9 @@
 import asyncio
 from functools import wraps
 import time
+import smtplib
+import imaplib
+from openai import AuthenticationError, RateLimitError, APIConnectionError, APIError
 
 from error_handlers.errors import *
 from bot_instance import logger

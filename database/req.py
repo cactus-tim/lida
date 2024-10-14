@@ -263,3 +263,19 @@ async def get_all_rows_by_user(tg_id: int):
         if len(res) == 0:
             raise Error404
         return res
+
+
+@db_error_handler
+async def get_all_rows_by_user_w_date(tg_id: int, date):
+    async with async_session() as session:
+        subquery = select(User_x_Company).where(
+            and_(
+                User_x_Company.user_id == tg_id,
+                User_x_Company.date == date
+            )).subquery()
+        query = select(Company, subquery).join(subquery, Company.id == subquery.c.company_id)
+        result = await session.execute(query)
+        res = result.all()
+        if len(res) == 0:
+            raise Error404
+        return res

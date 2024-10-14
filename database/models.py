@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Numeric, JSON
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, Boolean, ARRAY, BigInteger, ForeignKey, Numeric, JSON, Date
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
 from bot_instance import SQL_URL_RC
@@ -67,6 +69,7 @@ class User_x_Company(Base):
     company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
+    date = Column(Date, default=datetime.utcnow().date())
 
     user = relationship("User", back_populates="companies")
     company = relationship("Company", back_populates="users")

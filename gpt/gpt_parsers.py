@@ -323,7 +323,7 @@ async def preprocess_data(data: str):
     str = f"""
 Твоя задача обработаь полученный текст и сформировать json объект и затем отпарвить его мне
 переменные в этом json объекте: 
-name, surname, email, tel, company_name, jobtitle, product_name, product_description, problem_solved, target_okveds, target_number_employees, target_number_years_existence, target_revenue_last_year, target_jobtitle
+name, surname, email, tel, company_name, jobtitle, product_name, product_description, problem_solved, target_okveds, target_number_employees, target_number_years_existence, target_revenue_last_year, target_jobtitle, key_problem, key_value, proof_points
 
 обработка текста:
 name: str
@@ -335,6 +335,9 @@ jobtitle: str
 product_name: str
 product_description: str
 problem_solved: str
+key_problem: str
+key_value: str
+proof_points: str
 target_okveds: list(str), перед обработкой используя эту ссылку https://www.regfile.ru/okved2.html замени на номера окведов, не обрезай их, пиши полные номера
 target_number_employees: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
 target_number_years_existence: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
@@ -365,6 +368,7 @@ async def make_mail(user, company):
     Их выручка за прошлый год - {company.revenue_last_year} рублей, а количество сотрудников - {company.number_employees}
     Ты пишешь письмо от лица человека - его зовут {user.name} {user.surname}, он работает в {user.company_name} и занимает должность {user.jobtitle}, а его почта - {user.email}
     Твоя задача написать письмо о продукте: {user.product_name}, вот его описание {user.product_description} и проблемы, которые он решает {user.problem_solved}
+    Ключевая проблема, решаемая продуктом: {user.key_problem}, его ключевая ценность {user.key_value}, а доказательства {user.proof_points}
     В письме ты хочешь найти контакты человека на должности {user.target_jobtitle}  
         """
 

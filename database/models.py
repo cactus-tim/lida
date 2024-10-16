@@ -32,6 +32,7 @@ class User(Base):
     target_revenue_last_year = Column(ARRAY(Numeric), default=list)
     target_jobtitle = Column(ARRAY(String), default="")
     is_active = Column(Boolean, default=False)
+    is_quested = Column(Boolean, default=False)
     cnt = Column(Integer, default=0)
     thread = Column(String, default='')
 

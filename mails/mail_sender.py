@@ -77,7 +77,7 @@ async def loop():
         if user.is_active:
             await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
             await mail_start(user_tg_id)
-    await follow_up()
+    await follow_up('send')
 
 
 async def follow_up(state: str):
@@ -89,7 +89,7 @@ async def follow_up(state: str):
                 return
             else:
                 return ''
-        msg = 'Завтра я отправлю Фоллоу аппы для компаний:\n\n'
+        msg = 'Завтра я отправлю фоллоу аппы для компаний:\n\n'
         for row in rows:
             if row.status == 'waiting_rpl_ans':
                 company = await get_company_by_id(row.company_id)

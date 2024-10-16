@@ -19,7 +19,7 @@ from handlers.error import safe_send_message
 
 async def mail_start(user_tg_id: int):
     user = await get_user(user_tg_id)
-    if user.cnt >= 10:
+    if user.cnt >= 30:
         await send_stat(user_tg_id)
         return None
     company = await get_one_company(user_tg_id)
@@ -80,19 +80,28 @@ async def loop():
     await follow_up()
 
 
-async def follow_up():
+async def follow_up(state: str):
     for i in [1]:
-        date = datetime.utcnow().date() - timedelta(days=i)
+        date = datetime.utcnow().date() - timedelta(days=i) if state == 'send' else datetime.utcnow().date() - timedelta(days=i+1)
         rows = await get_all_rows_w_date(date)
         if not rows:
-            return
+            if state == 'send':
+                return
+            else:
+                return ''
+        msg = 'Завтра я отправлю Фоллоу аппы для компаний:\n\n'
         for row in rows:
             if row.status == 'waiting_rpl_ans':
-                data = await assystent_questionnary(row.thread, mes='следующее письмо', assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')  # TODO: rewrite mes
-                mail = await parse_email_text(data)
                 company = await get_company_by_id(row.company_id)
-                await send_mail(mail['theme'], mail['text'], company.company_mail)
-                await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
+                if state == 'send':
+                    data = await assystent_questionnary(row.thread, mes='следующее письмо', assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')  # TODO: rewrite mes
+                    mail = await parse_email_text(data)
+                    await send_mail(mail['theme'], mail['text'], company.company_mail)
+                    await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
+                else:
+                    msg += f'{company.company_name}\n'
+        if state == 'stat':
+            return msg+'\n'
 
 
 async def send_stat(user_tg_id: int):
@@ -100,7 +109,9 @@ async def send_stat(user_tg_id: int):
     cnt1 = 0
     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
-    msg = '📊 Итоги дня:\n\n📨 Сегодня отправлено писем: '
+    follow_up_stat = await follow_up('stat')
+    msg = ('Все подходящие компании на сегодня закончились, убежала искать новые 30 компаний и пришлю вам их '
+           f'завтра.\n\n📊 А вот пока ваша статистика:\n\n{follow_up_stat}📨 Сегодня отправлено писем:')
     stat = '🥳 Новые успешные контакты:\n'
     rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
     msg += f'{len(rows)}\n\n📬 Ожидаем ответы: '

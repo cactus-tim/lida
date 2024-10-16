@@ -4,6 +4,7 @@ import os
 import re
 from dotenv import load_dotenv
 
+from database.req import update_user_x_row_by_id
 from error_handlers.errors import *
 from error_handlers.handlers import gpt_error_handler, parser_error_handler
 from database.models import User
@@ -379,6 +380,8 @@ async def make_mail(user, company):
         assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP',
 
     )
+    thread_id = thread.id
+    await update_user_x_row_by_id(user.tg_id, company.id, {'thread': thread_id})
 
     while run.status != "completed":
         run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
@@ -422,7 +425,6 @@ async def assystent_questionnary(thread_id, mes="давай начнем", assis
 
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     data = messages.data[0].content[0].text.value.strip()
-    print(messages)
     if not data:
         return ContentError
     else:

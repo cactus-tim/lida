@@ -70,6 +70,8 @@ class User_x_Company(Base):
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
     date = Column(Date, default=datetime.utcnow().date())
+    follow_up_cnt = Column(Integer, default=0)
+    thread = Column(String, default='')
 
     user = relationship("User", back_populates="companies")
     company = relationship("Company", back_populates="users")

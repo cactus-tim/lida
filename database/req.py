@@ -128,6 +128,9 @@ async def get_one_company(tg_id: int):
         if not user:
             raise Error404
 
+        #  TODO: check invariant(company + user clearly defines row id)
+        #  TODO: check invariant(company clearly defines row id)
+
         subquery = select(User_x_Company.company_id).where(User_x_Company.user_id == tg_id).subquery()
         query = select(Company).outerjoin(subquery, Company.id == subquery.c.company_id).where(subquery.c.company_id.is_(None))
 
@@ -262,6 +265,18 @@ async def get_all_rows_by_user(tg_id: int):
         res = result.all()
         if len(res) == 0:
             raise Error404
+        return res
+
+
+@db_error_handler
+async def get_all_rows_w_date(date):
+    async with async_session() as session:
+        subquery = select(User_x_Company).where(User_x_Company.date == date).subquery()
+        query = select(Company, subquery).join(subquery, Company.id == subquery.c.company_id)
+        result = await session.execute(query)
+        res = result.all()
+        if len(res) == 0:
+            return []
         return res
 
 

@@ -1,5 +1,5 @@
 import imaplib
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 import email
 import smtplib
@@ -11,9 +11,9 @@ from error_handlers.handlers import mail_error_handler
 from bot_instance import bot
 from mails.lida_instance import login, password
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
-    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, get_all_rows_by_user_w_date
+    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, get_all_rows_by_user_w_date, get_all_rows_w_date
 from keyboards.keyboards import get_mail_ikb_full
-from gpt.gpt_parsers import make_mail, parse_email_data_bin
+from gpt.gpt_parsers import make_mail, parse_email_data_bin, assystent_questionnary, parse_email_text
 from handlers.error import safe_send_message
 
 
@@ -77,6 +77,22 @@ async def loop():
         if user.is_active:
             await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
             await mail_start(user_tg_id)
+    await follow_up()
+
+
+async def follow_up():
+    for i in [1]:
+        date = datetime.utcnow().date() - timedelta(days=i)
+        rows = await get_all_rows_w_date(date)
+        if not rows:
+            return
+        for row in rows:
+            if row.status == 'waiting_rpl_ans':
+                data = await assystent_questionnary(row.thread, mes='следующее письмо', assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')  # TODO: rewrite mes
+                mail = await parse_email_text(data)
+                company = await get_company_by_id(row.company_id)
+                await send_mail(mail['theme'], mail['text'], company.company_mail)
+                await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
 
 
 async def send_stat(user_tg_id: int):

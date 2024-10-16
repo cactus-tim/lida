@@ -30,7 +30,7 @@ def db_error_handler(func):
             return None
         except FilterError as e:
             logger.exception(f"{str(e.message)}, for {str(e.id)}")
-            await safe_send_message(bot, e.id, "К сожалению, мы не смогли найти подходяшую под ваши запрсы компанию")
+            await safe_send_message(bot, e.id, "К сожалению, мы не смогли найти подходяшую под ваши запросы компанию")
             return None
         except Exception as e:
             logger.exception(f"Неизвестная ошибка: {str(e)}")

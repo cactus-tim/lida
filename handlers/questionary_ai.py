@@ -31,7 +31,8 @@ async def cmd_data(callback: F.CallbackQuery):
                                  "Шаг 1: Я попрошу вас рассказать о себе и о вашем бизнесе/продукте.\n"
                                  "Шаг 2: Я уточню, каким компаниям и кому внутри них вы хотите продавать.\n"
                                  "Шаг 3: Я отправлюсь на поиск максимально подходящих контактов для вас."
-                                 "Шаг 4: Я напишу каждому найденному персонализированное письмо с целью вывести на созвон с вами.\n"
+                                 "Шаг 4: Я напишу каждому найденному персонализированное письмо с целью вывести на "
+                                 "созвон с вами.\n"
                                  "Шаг 5: Все контакты, кто проявит интерес, передам вам.\n",
                             reply_markup=get_data_ikb(),
                             )
@@ -46,7 +47,7 @@ async def cmd_quest(callback: F.CallbackQuery):
     if user == "not created":
         await create_user(callback.from_user.id, {'thread': thread.id})
     else:
-        await update_user(callback.from_user.id, {'thread': thread.id, 'is_active': False})
+        await update_user(callback.from_user.id, {'thread': thread.id, 'is_active': False, 'is_quested': False})
 
     data = await assystent_questionnary(thread_id)
     await safe_send_message(bot, callback, text=data, reply_markup=ReplyKeyboardRemove())
@@ -75,9 +76,9 @@ async def gpt_handler(message: Message):
         return
     user = await get_user(user_id)
     if user == "not created":
-        await safe_send_message(bot, message, text="Приве, мы пока не знакомы. Нажми /start")
+        await safe_send_message(bot, message, text="Привет, мы пока не знакомы. Нажми /start")
         return
-    if user.is_active:
+    if user.is_quested:
         await safe_send_message(bot, message, text="Я уже убежала искать подходящие компании, как только найду и "
                                                    "проверю их,"
                                                    "сразу вам напишу.\n"
@@ -94,11 +95,12 @@ async def gpt_handler(message: Message):
         cleaned_text = await clean_json_string(data_json)
         data_to_db = json.loads(cleaned_text)
         data_to_db['is_active'] = True
+        data_to_db['is_quested'] = True
         # if you need you can here cut okveds
         await update_user(user_id, data_to_db)
         await safe_send_message(bot, message, text="Отлично! Я заполнила всю информацию и приступила к поиску "
                                                    "подходящих компаний. "
-                                                   "Ежедневно я буду находить 10 таких компаний и составлять для них "
+                                                   "Ежедневно я буду находить 30 таких компаний и составлять для них "
                                                    "персонализированные письма от вашего имени. "
                                                    "Каждое письмо и компанию я согласую с вами. "
                                                    "У вас будет возможность отменить отправку письма, отправить его "

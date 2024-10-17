@@ -4,8 +4,8 @@ import json
 import io
 
 from handlers.error import safe_send_message
-from bot_instance import bot
-from gpt.gpt_parsers import client, preprocess_data, assystent_questionnary
+from bot_instance import bot, event
+from gpt.gpt_parsers import client, preprocess_data, assystent_questionnary, preprocess_extra_data
 from database.req import create_user, update_user, get_thread
 from keyboards.keyboards import get_data_ikb
 from database.req import get_user
@@ -78,7 +78,21 @@ async def gpt_handler(message: Message):
     if user == "not created":
         await safe_send_message(bot, message, text="Привет, мы пока не знакомы. Нажми /start")
         return
-    if user.is_quested:
+    elif user.is_quested2 == 'in_progress':
+        thread_id = user.thread_q2
+        data = await assystent_questionnary(thread_id, user_message, assistant_id='asst_ULM4xN6RyHPEuVNlaPBAxtoI')
+        if data[0:6] == 'Готово':
+            data_json = await preprocess_extra_data(data)
+            cleaned_text = await clean_json_string(data_json)
+            data_to_db = json.loads(cleaned_text)
+            data_to_db['is_quested2'] = 'done'
+            await update_user(user_id, data_to_db)
+            await safe_send_message(bot, message, text="молодец молодец")
+            event.set()
+        else:
+            await safe_send_message(bot, message, text=data)
+        return
+    elif user.is_quested or user.is_quested2 == 'done':
         await safe_send_message(bot, message, text="Я уже убежала искать подходящие компании, как только найду и "
                                                    "проверю их,"
                                                    "сразу вам напишу.\n"

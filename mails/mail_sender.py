@@ -8,12 +8,12 @@ from email.mime.text import MIMEText
 from aiogram.types import ReplyKeyboardRemove
 
 from error_handlers.handlers import mail_error_handler
-from bot_instance import bot
+from bot_instance import bot, event
 from mails.lida_instance import login, password
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
     create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, get_all_rows_by_user_w_date, get_all_rows_w_date
 from keyboards.keyboards import get_mail_ikb_full
-from gpt.gpt_parsers import make_mail, parse_email_data_bin, assystent_questionnary, parse_email_text
+from gpt.gpt_parsers import make_mail, parse_email_data_bin, assystent_questionnary, parse_email_text, client
 from handlers.error import safe_send_message
 
 
@@ -50,6 +50,15 @@ async def test_mail():
     await send_mail(theme, text, company.company_mail)
 
 
+async def start_q2(user_id):
+    user = await get_user(user_id)
+    thread = client.beta.threads.create()
+    thread_id = thread.id
+    data = await assystent_questionnary(thread_id, 'поехали', assistant_id='asst_ULM4xN6RyHPEuVNlaPBAxtoI')
+    await update_user(user.tg_id, {'is_quested2': 'in_progress', 'thread_q2': thread_id})
+    await safe_send_message(bot, user.tg_id, text=f"blalbabla doproydi anketu\n{data}")
+
+
 async def loop():
     # data = {
     #     'company_name': 'tim_company2',
@@ -77,31 +86,47 @@ async def loop():
         if user.is_active:
             await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
             await mail_start(user_tg_id)
-    await follow_up('send')
+    await follow_up()
 
 
-async def follow_up(state: str):
+async def follow_up_stat(user_id):
+    flag = False
+    user = await get_user(user_id)
+    if user.is_quested2 == 'no':
+        await start_q2(user_id)
+    msg = 'Завтра я отправлю фоллоу аппы для компаний:\n\n'
     for i in [1]:
-        date = datetime.utcnow().date() - timedelta(days=i) if state == 'send' else datetime.utcnow().date() - timedelta(days=i+1)
-        rows = await get_all_rows_w_date(date)
+        date = datetime.utcnow().date() - timedelta(days=i-1)
+        rows = await get_all_rows_by_user_w_date(user_id, date)
         if not rows:
-            if state == 'send':
-                return
-            else:
-                return ''
-        msg = 'Завтра я отправлю фоллоу аппы для компаний:\n\n'
+            continue
+        flag = True
         for row in rows:
             if row.status == 'waiting_rpl_ans':
                 company = await get_company_by_id(row.company_id)
-                if state == 'send':
-                    data = await assystent_questionnary(row.thread, mes='следующее письмо', assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')  # TODO: rewrite mes
-                    mail = await parse_email_text(data)
-                    await send_mail(mail['theme'], mail['text'], company.company_mail)
-                    await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
-                else:
-                    msg += f'{company.company_name}\n'
-        if state == 'stat':
-            return msg+'\n'
+                msg += f'{company.company_name}\n'
+        if flag:
+            if user.is_quested2 == 'no':
+                return msg+'\n\n', True
+            else:
+                return msg+'\n\n', False
+        else:
+            return '', False
+
+
+async def follow_up():
+    for i in [1]:
+        date = datetime.utcnow().date() - timedelta(days=i)
+        rows = await get_all_rows_w_date(date)
+        if not rows:
+            continue
+        for row in rows:
+            if row.status == 'waiting_rpl_ans':
+                company = await get_company_by_id(row.company_id)
+                data = await assystent_questionnary(row.thread, mes='следующее письмо', assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')  # TODO: rewrite mes
+                mail = await parse_email_text(data)
+                await send_mail(mail['theme'], mail['text'], company.company_mail)
+                await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
 
 
 async def send_stat(user_tg_id: int):
@@ -109,9 +134,9 @@ async def send_stat(user_tg_id: int):
     cnt1 = 0
     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
-    follow_up_stat = await follow_up('stat')
+    follow_up_st, flag = await follow_up_stat(user_tg_id)
     msg = ('Все подходящие компании на сегодня закончились, убежала искать новые 30 компаний и пришлю вам их '
-           f'завтра.\n\n📊 А вот пока ваша статистика:\n\n{follow_up_stat}📨 Сегодня отправлено писем:')
+           f'завтра.\n\n📊 А вот пока ваша статистика:\n\n{follow_up_st}📨 Сегодня отправлено писем:')
     stat = '🥳 Новые успешные контакты:\n'
     rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
     msg += f'{len(rows)}\n\n📬 Ожидаем ответы: '
@@ -134,7 +159,9 @@ async def send_stat(user_tg_id: int):
 
     msg += f'{cnt1-cnt} компаний\n\n'
     msg += stat
-    await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove(),)
+    await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove())
+    if flag and user.is_quested2 == 'no':
+        await start_q2(user.tg_id)
 
 
 # async def send_stat_nu(user_tg_id: int):

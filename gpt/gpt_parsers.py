@@ -362,6 +362,34 @@ target_jobtitle: list(str)
 
 
 @gpt_error_handler
+async def preprocess_extra_data(data: str):  # TODO: prompt
+    str = f"""
+Твоя задача обработаь полученный текст и сформировать json объект и затем отпарвить его мне
+переменные в этом json объекте: 
+case, hist
+
+обработка текста:
+case: str
+hist: str
+
+ответ отправь мне в формате json, не добавляя к нему каких либо комментариев
+
+{data}
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": str},
+        ]
+    )
+    res = response.choices[0].message.content
+    if not res:
+        raise ContentError
+    else:
+        return res
+
+
+@gpt_error_handler
 async def make_mail(user, company):
     text = f"""
     Твоя задача написать письмо для компании {company.company_name}, ее область деятельности {company.okveds} и инн - {company.inn}, а сайт {company.site}

@@ -32,6 +32,7 @@ class User(Base):
     target_revenue_last_year = Column(ARRAY(Numeric), default=list)
     target_jobtitle = Column(ARRAY(String), default="")
     is_active = Column(Boolean, default=False)
+    is_superuser = Column(Boolean, default=False)
     cnt = Column(Integer, default=0)
     thread = Column(String, default='')
 
@@ -67,12 +68,24 @@ class User_x_Company(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.tg_id"), nullable=False)
     company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
+    acc_id = Column(Integer, ForeignKey("acc.id"), nullable=False)
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
     date = Column(Date, default=datetime.utcnow().date())
 
     user = relationship("User", back_populates="companies")
     company = relationship("Company", back_populates="users")
+
+
+class Acc(Base):
+    __tablename__ = 'acc'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, default='', nullable=False)
+    password = Column(String, default='', nullable=False)
+    in_use = Column(Integer, default=0)
+    all_use = Column(Integer, default=0)
+    ans = Column(Integer, default=0)
 
 
 async def async_main():

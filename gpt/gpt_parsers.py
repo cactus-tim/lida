@@ -48,18 +48,18 @@ def parse_email_text(text):
     subject_match = re.search(r'Тема:\s*(.*)', text)
     body_match = re.search(r'Письмо:\s*(.*)', text, re.DOTALL)
 
-    prev = prev_match.group(1).strip() if subject_match else None
+    if prev_match:
+        prev = prev_match.group(1).strip() if subject_match else None
     subject = subject_match.group(1).strip() if subject_match else None
     body = body_match.group(1).strip() if body_match else None
 
-    if not prev or not subject or not body:
+    if not subject or not body:
         raise ParseError
     else:
-        return {
-            "prev": prev,
-            "theme": subject,
-            "text": body
-        }
+        data = {"theme": subject, "text": body }
+        if prev_match:
+            data["prev"] = prev
+        return data
 
 
 @parser_error_handler

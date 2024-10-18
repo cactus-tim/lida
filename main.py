@@ -36,7 +36,7 @@ async def main() -> None:
 
     scheduler = AsyncIOScheduler()
 
-    scheduler.add_job(loop, 'interval', seconds=86400, start_date=datetime.now() + timedelta(seconds=5),
+    scheduler.add_job(loop, 'interval', seconds=1800, start_date=datetime.now() + timedelta(seconds=5),
                       id='loop')
 
     try:

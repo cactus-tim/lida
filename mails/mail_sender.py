@@ -25,7 +25,6 @@ async def mail_start(user_tg_id: int):
     company = await get_one_company(user_tg_id)
     if not company:
         return None
-    # company = await get_company_by_id(1)
     await create_user_x_row_by_id(user_tg_id, company.id)
     msg = await safe_send_message(bot, user_tg_id, "Пишем письмо...")
     mail = await make_mail(user, company)
@@ -81,6 +80,8 @@ async def loop():
     # await update_user(483458201, {'is_active': True})
 
     user_tg_ids = await get_users_tg_id()
+    if not user_tg_ids:
+        return
     for user_tg_id in user_tg_ids:
         user = await get_user(user_tg_id)
         if user.is_active:
@@ -91,9 +92,8 @@ async def loop():
 
 async def follow_up_stat(user_id):
     flag = False
+    flag_follow = False
     user = await get_user(user_id)
-    if user.is_quested2 == 'no':
-        await start_q2(user_id)
     msg = 'Завтра я отправлю фоллоу аппы для компаний:\n\n'
     for i in [1]:
         date = datetime.utcnow().date() - timedelta(days=i-1)
@@ -103,15 +103,16 @@ async def follow_up_stat(user_id):
         flag = True
         for row in rows:
             if row.status == 'waiting_rpl_ans':
+                flag_follow = True
                 company = await get_company_by_id(row.company_id)
                 msg += f'{company.company_name}\n'
         if flag:
             if user.is_quested2 == 'no':
-                return msg+'\n\n', True
+                return msg+'\n\n', True, flag_follow
             else:
-                return msg+'\n\n', False
+                return msg+'\n\n', False, flag_follow
         else:
-            return '', False
+            return '', False, flag_follow
 
 
 async def follow_up():
@@ -123,20 +124,25 @@ async def follow_up():
         for row in rows:
             if row.status == 'waiting_rpl_ans':
                 company = await get_company_by_id(row.company_id)
-                data = await assystent_questionnary(row.thread, mes='следующее письмо', assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')  # TODO: rewrite mes
+                msg = 'напиши пожалуйста следующее письмо'
+                if i == 1:
+                    user = await get_user(row.user_id)
+                    msg += f'кейс из истории прожаи товара: {user.case}\n'
+                    msg += f'история из жизни продавыца: {user.hist}\n'
+                data = await assystent_questionnary(row.thread, mes=msg, assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP')
                 mail = await parse_email_text(data)
                 await send_mail(mail['theme'], mail['text'], company.company_mail)
                 await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
 
 
 async def send_stat(user_tg_id: int):
+    flag_good = False
     cnt = 0
     cnt1 = 0
     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
-    follow_up_st, flag = await follow_up_stat(user_tg_id)
     msg = ('Все подходящие компании на сегодня закончились, убежала искать новые 30 компаний и пришлю вам их '
-           f'завтра.\n\n📊 А вот пока ваша статистика:\n\n{follow_up_st}📨 Сегодня отправлено писем:')
+           f'завтра.\n\n📊 А вот пока ваша статистика:\n\n📨 Сегодня отправлено писем: ')
     stat = '🥳 Новые успешные контакты:\n'
     rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
     msg += f'{len(rows)}\n\n📬 Ожидаем ответы: '
@@ -153,12 +159,17 @@ async def send_stat(user_tg_id: int):
                     await update_user_x_row_by_id(user_tg_id, row.company_id,
                                                   {'status': 'lead', 'comment': mail})
                     cnt += 1
+                    flag_good = True
                     stat += f' - 🟢 {company.company_name} — Клиент проявил интерес.\n   👉 Я переслала вам это письмо на ваш e-mail. Рекомендую ответить как можно скорее!\n\n'
                 else:
                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
 
     msg += f'{cnt1-cnt} компаний\n\n'
-    msg += stat
+    if flag_good:
+        msg += stat
+    follow_up_st, flag, flag_follow = await follow_up_stat(user_tg_id)
+    if flag_follow:
+        msg += follow_up_st
     await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove())
     if flag and user.is_quested2 == 'no':
         await start_q2(user.tg_id)

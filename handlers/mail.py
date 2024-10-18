@@ -24,7 +24,7 @@ async def cmd_send(callback: F.CallbackQuery, state: FSMContext):
     await send_mail(theme, text, company.company_mail)
     user = await get_user(callback.from_user.id)
     await update_user(callback.from_user.id, {'cnt': user.cnt + 1})
-    await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "waiting_rpl_ans", 'date': datetime.utcnow().date})
+    await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "waiting_rpl_ans", 'date': datetime.utcnow().date()})
     # await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "waiting_rpl_contact"})
     await mail_start(callback.from_user.id)
 

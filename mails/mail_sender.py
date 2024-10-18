@@ -72,6 +72,8 @@ async def loop():
     # await update_user(483458201, {'is_active': True})
 
     user_tg_ids = await get_users_tg_id()
+    if not user_tg_ids:
+        return
     for user_tg_id in user_tg_ids:
         user = await get_user(user_tg_id)
         if user.is_active:

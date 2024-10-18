@@ -292,6 +292,16 @@ async def get_acc(id: int):
 
 
 @db_error_handler
+async def get_acc_by_email(email: str):
+    async with async_session() as session:
+        acc = await session.scalar(select(Acc).where(Acc.email == email))
+        if acc:
+            return acc
+        else:
+            return 'not created'
+
+
+@db_error_handler
 async def get_best_acc_id():
     async with async_session() as session:
         best_acc = await session.scalar(select(Acc).order_by(Acc.in_use))
@@ -302,11 +312,19 @@ async def get_best_acc_id():
 
 
 @db_error_handler
-async def add_acc(data: dict):
+async def create_acc(data: dict):
     async with async_session() as session:
-        acc_data = Acc(**data)
-        session.add(acc_data)
-        await session.commit()
+        if data.get('email', 0) == 0:
+            raise ZeroEmailError
+        if data.get('password', 0) == 0:
+            raise ZeroPassError
+        acc = await get_acc_by_email(data['email'])
+        if acc == 'not created':
+            acc_data = Acc(**data)
+            session.add(acc_data)
+            await session.commit()
+        else:
+            raise Error409
 
 
 @db_error_handler

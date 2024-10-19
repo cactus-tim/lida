@@ -178,6 +178,7 @@ async def get_one_company(tg_id: int):
         if data:
             return data
         else:
+            await update_user(tg_id, {'cnt': 0, 'is_active': True})
             raise FilterError(tg_id)
 
 

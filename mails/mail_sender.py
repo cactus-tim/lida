@@ -234,7 +234,8 @@ async def send_mail(theme, mail, to_email):
     smtp_port = 2525
     msg = MIMEMultipart()
     msg['From'] = 'lida.ai@claricont.ru'
-    msg['To'] = to_email
+    # msg['To'] = to_email
+    msg['To'] = 'tim.sosnin@gmail.com'  # only for tests
     msg['Subject'] = theme
     msg.attach(MIMEText(body, 'plain'))
 
@@ -242,7 +243,8 @@ async def send_mail(theme, mail, to_email):
     server.starttls()
     server.login(login, password)
     print('kk')
-    server.sendmail(login, to_email, msg.as_string())
+    # server.sendmail(login, to_email, msg.as_string())
+    server.sendmail(login, 'tim.sosnin@gmail.com', msg.as_string())  # only for tests
     print('aa')
     server.quit()
 
@@ -261,7 +263,8 @@ async def get_latest_email_by_sender(sender_email):
     mail.login(login, password)
 
     mail.select("inbox")
-    status, messages = mail.search(None, f'FROM "{sender_email}"')
+    # status, messages = mail.search(None, f'FROM "{sender_email}"')
+    status, messages = mail.search(None, f'FROM "tim.sosnin@gmail.com"')  # only for tests
     email_ids = messages[0].split()
 
     if email_ids:

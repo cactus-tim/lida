@@ -20,6 +20,18 @@ class Error409(CustomError):
         super().__init__(self.message)
 
 
+class ZeroEmailError(CustomError):
+    def __int__(self, message="You cant create account without email"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class ZeroPassError(CustomError):
+    def __int__(self, message="You cant create account without password"):
+        self.message = message
+        super().__init__(self.message)
+
+
 class CompanyNameError(CustomError):
     def __init__(self, message="You cant create company without name"):
         self.message = message

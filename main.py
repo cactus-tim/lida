@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from bot_instance import bot
 from database.parse_company import csv_to_db
+from database.accs import accs_to_db
 from handlers import user, questionary_ai, mail, error
 from mails.mail_sender import loop, test_mail
 from database.models import async_main
@@ -33,6 +34,7 @@ async def main() -> None:
     register_routers(dp)
 
     await csv_to_db()
+    await accs_to_db()
 
     scheduler = AsyncIOScheduler()
 

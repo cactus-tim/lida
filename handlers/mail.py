@@ -2,7 +2,8 @@ from datetime import datetime
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 
-from database.req import update_user, update_user_x_row_by_status, get_user, get_user_x_row_by_status
+from database.req import update_user, update_user_x_row_by_status, get_user, get_user_x_row_by_status, update_acc, \
+    get_acc
 from keyboards.keyboards import get_mail_ikb
 from mails.mail_sender import mail_start, send_mail
 from gpt.gpt_parsers import make_mail
@@ -21,10 +22,12 @@ async def cmd_send(callback: F.CallbackQuery, state: FSMContext):
     company = await get_company_by_id(row.company_id)
     theme = row.comment['theme']
     text = row.comment['text']
-    await send_mail(theme, text, company.company_mail)
+    await send_mail(theme, text, company.company_mail, row.acc_id)
     user = await get_user(callback.from_user.id)
     await update_user(callback.from_user.id, {'cnt': user.cnt + 1})
     await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "waiting_rpl_ans", 'date': datetime.utcnow().date()})
+    acc = await get_acc(row.acc_id)
+    await update_acc(row.acc_id, {'in_use': acc.in_use+1, 'all_use': acc.all_use+1})
     # await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "waiting_rpl_contact"})
     await mail_start(callback.from_user.id)
 

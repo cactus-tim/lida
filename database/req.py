@@ -134,8 +134,8 @@ async def get_one_company(tg_id: int):
         subquery = select(User_x_Company.company_id).where(User_x_Company.user_id == tg_id).subquery()
         query = select(Company).outerjoin(subquery, Company.id == subquery.c.company_id).where(subquery.c.company_id.is_(None))
 
-        if len(user.target_okveds) > 0 and user.target_okveds[0] != '0':
-            query = query.where(Company.okveds.in_(user.target_okveds))
+        # if len(user.target_okveds) > 0 and user.target_okveds[0] != '0':
+        #     query = query.where(Company.okveds.in_(user.target_okveds))
 
         if len(user.target_number_employees) > 0 and user.target_number_employees[0] != 0:
             if len(user.target_number_employees) == 1:

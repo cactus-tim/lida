@@ -1,9 +1,8 @@
 from sqlalchemy import select, desc, distinct, and_
 
-from database.models import User, Company, User_x_Company, async_session
+from database.models import User, Company, User_x_Company, async_session, Acc
 from error_handlers.errors import *
 from error_handlers.handlers import db_error_handler
-
 
 @db_error_handler
 async def get_user(tg_id: int):
@@ -208,7 +207,8 @@ async def create_user_x_row_by_id(tg_id: int, company_id: int):
     async with async_session() as session:
         row = await get_user_x_company_row_by_id(tg_id, company_id)
         if not row:
-            row = User_x_Company(user_id=tg_id, company_id=company_id)
+            acc_id = await get_best_acc_id()
+            row = User_x_Company(user_id=tg_id, company_id=company_id, acc_id=acc_id)
             session.add(row)
             await session.commit()
         else:
@@ -279,3 +279,60 @@ async def get_all_rows_by_user_w_date(tg_id: int, date):
         if len(res) == 0:
             raise Error404
         return res
+
+
+@db_error_handler
+async def get_acc(id: int):
+    async with async_session() as session:
+        acc = await session.scalar(select(Acc).where(Acc.id == id))
+        if acc:
+            return acc
+        else:
+            raise Error404
+
+
+@db_error_handler
+async def get_acc_by_email(email: str):
+    async with async_session() as session:
+        acc = await session.scalar(select(Acc).where(Acc.email == email))
+        if acc:
+            return acc
+        else:
+            return 'not created'
+
+
+@db_error_handler
+async def get_best_acc_id():
+    async with async_session() as session:
+        best_acc = await session.scalar(select(Acc).order_by(Acc.in_use))
+        if best_acc:
+            return best_acc.id
+        else:
+            raise Error404
+
+
+@db_error_handler
+async def create_acc(data: dict):
+    async with async_session() as session:
+        if data.get('email', 0) == 0:
+            raise ZeroEmailError
+        if data.get('password', 0) == 0:
+            raise ZeroPassError
+        acc = await get_acc_by_email(data['email'])
+        if acc == 'not created':
+            acc_data = Acc(**data)
+            session.add(acc_data)
+            await session.commit()
+        else:
+            raise Error409
+
+
+@db_error_handler
+async def update_acc(id: int, data: dict):
+    async with async_session() as session:
+        acc = await get_acc(id)
+        for key, value in data.items():
+            setattr(acc, key, value)
+        session.add(acc)
+        await session.commit()
+

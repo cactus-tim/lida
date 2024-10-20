@@ -9,9 +9,9 @@ from aiogram.types import ReplyKeyboardRemove
 
 from error_handlers.handlers import mail_error_handler
 from bot_instance import bot
-from mails.lida_instance import login, password
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
-    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, get_all_rows_by_user_w_date
+    create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, \
+    get_all_rows_by_user_w_date, get_acc, update_acc
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail, parse_email_data_bin
 from handlers.error import safe_send_message
@@ -47,7 +47,7 @@ async def test_mail():
     company = await get_company_by_id(row.company_id)
     theme = row.comment['theme']
     text = row.comment['text']
-    await send_mail(theme, text, company.company_mail)
+    await send_mail(theme, text, company.company_mail, row.acc_id)
 
 
 async def loop():
@@ -72,6 +72,8 @@ async def loop():
     # await update_user(483458201, {'is_active': True})
 
     user_tg_ids = await get_users_tg_id()
+    if not user_tg_ids:
+        return
     for user_tg_id in user_tg_ids:
         user = await get_user(user_tg_id)
         if user.is_active:
@@ -93,17 +95,21 @@ async def send_stat(user_tg_id: int):
         if row.status == 'waiting_rpl_ans':
             cnt1 += 1
             company = await get_company_by_id(row.company_id)
-            mail = await get_latest_email_by_sender(company.company_mail)
+            mail = await get_latest_email_by_sender(company.company_mail, row.acc_id)
             if mail['theme'] != 'not found':
+                acc = await get_acc(row.acc_id)
+                await update_acc(row.acc_id, {'ans': acc.ans + 1})
                 data = await parse_email_data_bin(mail['text'])
                 if data.get('no', 0) == 0:
-                    await send_mail(mail['theme'], mail['text'], user.email)
+                    await send_mail(mail['theme'], mail['text'], user.email, row.acc_id)
                     await update_user_x_row_by_id(user_tg_id, row.company_id,
                                                   {'status': 'lead', 'comment': mail})
+                    await update_acc(row.acc_id, {'in_use': acc.in_use - 1})
                     cnt += 1
                     stat += f' - 🟢 {company.company_name} — Клиент проявил интерес.\n   👉 Я переслала вам это письмо на ваш e-mail. Рекомендую ответить как можно скорее!\n\n'
                 else:
                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
+                    await update_acc(row.acc_id, {'in_use': acc.in_use - 1})
 
     msg += f'{cnt1-cnt} компаний\n\n'
     msg += stat
@@ -162,22 +168,23 @@ async def send_stat(user_tg_id: int):
 
 
 @mail_error_handler
-async def send_mail(theme, mail, to_email):
+async def send_mail(theme, mail, to_email, acc_id):
+    acc = await get_acc(acc_id)
     theme = theme
     body = mail
     smtp_server = "smtp.timeweb.ru"
     smtp_port = 2525
     msg = MIMEMultipart()
-    msg['From'] = 'lida.ai@claricont.ru'
+    msg['From'] = acc.email
     msg['To'] = to_email
     msg['Subject'] = theme
     msg.attach(MIMEText(body, 'plain'))
 
     server = smtplib.SMTP(smtp_server, smtp_port)
     server.starttls()
-    server.login(login, password)
+    server.login(acc.email, acc.password)
     print('kk')
-    server.sendmail(login, to_email, msg.as_string())
+    server.sendmail(acc.email, to_email, msg.as_string())
     print('aa')
     server.quit()
 
@@ -190,10 +197,11 @@ async def decode_mime_words(s):
 
 
 @mail_error_handler
-async def get_latest_email_by_sender(sender_email):
+async def get_latest_email_by_sender(sender_email, acc_id):
+    acc = await get_acc(acc_id)
     imap_server = "imap.timeweb.ru"
     mail = imaplib.IMAP4_SSL(imap_server, 993)
-    mail.login(login, password)
+    mail.login(acc.email, acc.password)
 
     mail.select("inbox")
     status, messages = mail.search(None, f'FROM "{sender_email}"')

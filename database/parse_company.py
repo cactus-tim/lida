@@ -5,7 +5,7 @@ import openpyxl
 
 from database.req import create_company
 
-file_path = '/Users/timofejsosnin/Downloads/Lida24.09_as.xlsx'  # path to .csv file on your computer
+file_path = '/Users/timofejsosnin/Downloads/merged_data_2010_.xlsx'  # path to .csv file on your computer
 
 
 async def csv_to_db_nu():
@@ -80,13 +80,13 @@ async def csv_to_db():
 
             if not pd.isna(row['Дата регистрации']):
                 today = datetime.now().year
-                date = int(str(row['Дата регистрации'])[0:4])
+                date = int(str(row['Дата регистрации']))
                 age = today - date
             else:
                 age = -1
 
-            emails = row['Электронный адрес'].split(',') if not pd.isna(row['Электронный адрес']) else ['-1']
-            sites = row['Сайт в сети Интернет'].split(',') if not pd.isna(row['Сайт в сети Интернет']) else ['-1']
+            emails = row['Электронный адрес'].split(' | ') if not pd.isna(row['Электронный адрес']) else ['-1']
+            sites = row['Сайт в сети Интернет'].split(' | ') if not pd.isna(row['Сайт в сети Интернет']) else ['-1']
 
             data = {
                 'company_name': row['Наименование'],

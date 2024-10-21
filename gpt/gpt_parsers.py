@@ -4,6 +4,7 @@ import os
 import re
 from dotenv import load_dotenv
 
+from database.req import update_user_x_row_by_id
 from error_handlers.errors import *
 from error_handlers.handlers import gpt_error_handler, parser_error_handler
 from database.models import User
@@ -47,18 +48,18 @@ def parse_email_text(text):
     subject_match = re.search(r'Тема:\s*(.*)', text)
     body_match = re.search(r'Письмо:\s*(.*)', text, re.DOTALL)
 
-    prev = prev_match.group(1).strip() if subject_match else None
+    if prev_match:
+        prev = prev_match.group(1).strip() if subject_match else None
     subject = subject_match.group(1).strip() if subject_match else None
     body = body_match.group(1).strip() if body_match else None
 
-    if not prev or not subject or not body:
+    if not subject or not body:
         raise ParseError
     else:
-        return {
-            "prev": prev,
-            "theme": subject,
-            "text": body
-        }
+        data = {"theme": subject, "text": body }
+        if prev_match:
+            data["prev"] = prev
+        return data
 
 
 @parser_error_handler
@@ -322,7 +323,7 @@ async def preprocess_data(data: str):
     str = f"""
 Твоя задача обработаь полученный текст и сформировать json объект и затем отпарвить его мне
 переменные в этом json объекте: 
-name, surname, email, tel, company_name, jobtitle, product_name, product_description, problem_solved, target_okveds, target_number_employees, target_number_years_existence, target_revenue_last_year, target_jobtitle
+name, surname, email, tel, company_name, jobtitle, product_name, product_description, problem_solved, target_okveds, target_number_employees, target_number_years_existence, target_revenue_last_year, target_jobtitle, key_problem, key_value, proof_points
 
 обработка текста:
 name: str
@@ -334,11 +335,42 @@ jobtitle: str
 product_name: str
 product_description: str
 problem_solved: str
+key_problem: str
+key_value: str
+proof_points: str
 target_okveds: list(str), перед обработкой используя эту ссылку https://www.regfile.ru/okved2.html замени на номера окведов, не обрезай их, пиши полные номера
 target_number_employees: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
 target_number_years_existence: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен
 target_revenue_last_year: list(int), массив должен содержать либо не более 2 чисел - минимальное и максимальное количество, либо одно число (!=0), либо массив с единственным числом 0, если в данных говорится о том что этот параметр не важен, сами числа запиши целиком, со всеми разрядами
 target_jobtitle: list(str)
+
+ответ отправь мне в формате json, не добавляя к нему каких либо комментариев
+
+{data}
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": str},
+        ]
+    )
+    res = response.choices[0].message.content
+    if not res:
+        raise ContentError
+    else:
+        return res
+
+
+@gpt_error_handler
+async def preprocess_extra_data(data: str):  # TODO: prompt
+    str = f"""
+Твоя задача обработаь полученный текст и сформировать json объект и затем отпарвить его мне
+переменные в этом json объекте: 
+case, hist
+
+обработка текста:
+case: str
+hist: str
 
 ответ отправь мне в формате json, не добавляя к нему каких либо комментариев
 
@@ -364,6 +396,7 @@ async def make_mail(user, company):
     Их выручка за прошлый год - {company.revenue_last_year} рублей, а количество сотрудников - {company.number_employees}
     Ты пишешь письмо от лица человека - его зовут {user.name} {user.surname}, он работает в {user.company_name} и занимает должность {user.jobtitle}, а его почта - {user.email}
     Твоя задача написать письмо о продукте: {user.product_name}, вот его описание {user.product_description} и проблемы, которые он решает {user.problem_solved}
+    Ключевая проблема, решаемая продуктом: {user.key_problem}, его ключевая ценность {user.key_value}, а доказательства {user.proof_points}
     В письме ты хочешь найти контакты человека на должности {user.target_jobtitle}  
         """
 
@@ -379,6 +412,8 @@ async def make_mail(user, company):
         assistant_id='asst_Ag8SRhkXXleq6kgdW0zWtkAP',
 
     )
+    thread_id = thread.id
+    await update_user_x_row_by_id(user.tg_id, company.id, {'thread': thread_id})
 
     while run.status != "completed":
         run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
@@ -422,7 +457,6 @@ async def assystent_questionnary(thread_id, mes="давай начнем", assis
 
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     data = messages.data[0].content[0].text.value.strip()
-    print(messages)
     if not data:
         return ContentError
     else:

@@ -33,16 +33,17 @@ async def main() -> None:
 
     register_routers(dp)
 
-    # await csv_to_db()
+    await csv_to_db()
     await accs_to_db()
 
     scheduler = AsyncIOScheduler()
 
-    scheduler.add_job(loop, 'interval', seconds=86400, start_date=datetime.now() + timedelta(seconds=5),
+    scheduler.add_job(loop, 'interval', seconds=1800, start_date=datetime.now() + timedelta(seconds=5),
                       id='loop')
 
     try:
-        scheduler.start()
+        # scheduler.start()
+        await loop()
         await dp.start_polling(bot, skip_updates=True)
     except Exception as _ex:
         print(f'Exception: {_ex}')

@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import sys
 from aiogram.client.bot import DefaultBotProperties
 import logging
+import asyncio
 
 sys.path.append(os.path.join(sys.path[0], 'lida'))
 
@@ -27,3 +28,5 @@ logging.basicConfig(
 
 
 logger = logging.getLogger(__name__)
+
+event = asyncio.Event()

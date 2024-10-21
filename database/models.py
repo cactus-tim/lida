@@ -26,15 +26,25 @@ class User(Base):
     product_name = Column(String, default="")
     product_description = Column(String, default="")
     problem_solved = Column(String, default="")
+    key_problem = Column(String, default="")
+    key_value = Column(String, default="")
+    proof_points = Column(String, default="")
+
+    case = Column(String, default='')
+    hist = Column(String, default='')
+
     target_okveds = Column(ARRAY(String), default=list)
     target_number_employees = Column(ARRAY(Integer), default=list)
     target_number_years_existence = Column(ARRAY(Integer), default=list)
     target_revenue_last_year = Column(ARRAY(Numeric), default=list)
     target_jobtitle = Column(ARRAY(String), default="")
     is_active = Column(Boolean, default=False)
+    is_quested = Column(Boolean, default=False)
+    is_quested2 = Column(String, default='no')  # only no, in_progress, done
     is_superuser = Column(Boolean, default=False)
     cnt = Column(Integer, default=0)
     thread = Column(String, default='')
+    thread_q2 = Column(String, default='')
 
     companies = relationship("User_x_Company", back_populates="user")
 
@@ -72,6 +82,8 @@ class User_x_Company(Base):
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
     date = Column(Date, default=datetime.utcnow().date())
+    follow_up_cnt = Column(Integer, default=0)
+    thread = Column(String, default='')
 
     user = relationship("User", back_populates="companies")
     company = relationship("Company", back_populates="users")

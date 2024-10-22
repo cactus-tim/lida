@@ -139,8 +139,9 @@ async def get_one_company(tg_id: int):
         if len(user.target_number_employees) > 0 and user.target_number_employees[0] != 0:
             if len(user.target_number_employees) == 1:
                 query = query.where(
-                    and_(Company.number_employees >= user.target_number_employees[0]/4,
-                         Company.number_employees <= user.target_number_employees[0]*4)
+                    Company.number_employees >= user.target_number_employees[0]
+                    # and_(Company.number_employees >= user.target_number_employees[0]/4,
+                    #      Company.number_employees <= user.target_number_employees[0]*4)
                 )
             elif len(user.target_number_employees) >= 2:
                 query = query.where(
@@ -151,8 +152,9 @@ async def get_one_company(tg_id: int):
         if len(user.target_number_years_existence) > 0 and user.target_number_years_existence[0] != 0:
             if len(user.target_number_years_existence) == 1:
                 query = query.where(
-                    and_(Company.number_years_existence >= user.target_number_years_existence[0]/4,
-                         Company.number_employees <= user.target_number_years_existence[0]*4)
+                    Company.number_years_existence >= user.target_number_years_existence[0]
+                    # and_(Company.number_years_existence >= user.target_number_years_existence[0]/4,
+                    #      Company.number_employees <= user.target_number_years_existence[0]*4)
                 )
             elif len(user.target_number_years_existence) >= 2:
                 query = query.where(
@@ -163,8 +165,9 @@ async def get_one_company(tg_id: int):
         if len(user.target_revenue_last_year) > 0 and user.target_revenue_last_year[0] != 0:  # need to check
             if len(user.target_revenue_last_year) == 1:
                 query = query.where(
-                    and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/4,
-                         Company.revenue_last_year <= user.target_revenue_last_year[0]*4)
+                    Company.revenue_last_year >= user.target_revenue_last_year[0]
+                    # and_(Company.revenue_last_year >= user.target_revenue_last_year[0]/4,
+                    #      Company.revenue_last_year <= user.target_revenue_last_year[0]*4)
                 )
             elif len(user.target_revenue_last_year) >= 2:
                 query = query.where(

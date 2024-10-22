@@ -11,7 +11,7 @@ from error_handlers.handlers import mail_error_handler
 from bot_instance import bot, event
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
     create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, \
-    get_all_rows_by_user_w_date, get_acc, update_acc
+    get_all_rows_by_user_w_date, get_acc, update_acc, get_all_rows_w_date
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail, parse_email_data_bin, assystent_questionnary, parse_email_text, client
 from handlers.error import safe_send_message
@@ -95,7 +95,7 @@ async def follow_up_stat(user_id):
     flag_follow = False
     user = await get_user(user_id)
     msg = 'Завтра я отправлю фоллоу аппы для компаний:\n\n'
-    for i in [1]:
+    for i in [2, 5, 12, 17]:
         date = datetime.utcnow().date() - timedelta(days=i-1)
         rows = await get_all_rows_by_user_w_date(user_id, date)
         if not rows:
@@ -116,7 +116,7 @@ async def follow_up_stat(user_id):
 
 
 async def follow_up():
-    for i in [1]:
+    for i in [2, 5, 12, 17]:
         date = datetime.utcnow().date() - timedelta(days=i)
         rows = await get_all_rows_w_date(date)
         if not rows:

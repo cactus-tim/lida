@@ -10,7 +10,7 @@ from bot_instance import bot
 from database.parse_company import csv_to_db
 from database.accs import accs_to_db
 from handlers import user, questionary_ai, mail, error
-from mails.mail_sender import loop, test_mail
+from mails.mail_sender import loop, test_mail, send_stat
 from database.models import async_main
 
 
@@ -33,17 +33,19 @@ async def main() -> None:
 
     register_routers(dp)
 
-    await csv_to_db()
+    # await csv_to_db()
     await accs_to_db()
 
     scheduler = AsyncIOScheduler()
 
-    scheduler.add_job(loop, 'interval', seconds=1800, start_date=datetime.now() + timedelta(seconds=5),
+    scheduler.add_job(loop, 'interval', seconds=86400, start_date=datetime.now() + timedelta(seconds=600),
                       id='loop')
 
     try:
-        # scheduler.start()
-        await loop()
+        scheduler.start()
+        # await test_mail()
+        # await loop()
+        # await send_stat(483458201)
         await dp.start_polling(bot, skip_updates=True)
     except Exception as _ex:
         print(f'Exception: {_ex}')

@@ -249,7 +249,7 @@ async def send_mail(theme, mail, to_email, acc_id):
     server.starttls()
     server.login(acc.email, acc.password)
     print('kk')
-    server.sendmail(login, to_email, msg.as_string())
+    server.sendmail(acc.email, to_email, msg.as_string())
     # server.sendmail(login, 'tim.sosnin@gmail.com', msg.as_string())  # only for tests
     print('aa')
     server.quit()

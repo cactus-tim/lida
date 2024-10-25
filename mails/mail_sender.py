@@ -35,7 +35,8 @@ async def mail_start(user_tg_id: int):
     await update_user_x_row_by_id(user_tg_id, company.id, {'comment': mail})
     await bot.delete_message(chat_id=user_tg_id, message_id=msg.message_id)
     await safe_send_message(bot, user_tg_id, text=f"Для компании {company.company_name} я подготовила письмо:\n"
-                                                  f"Кратокое описании компании:\n{mail['prev']}\n\n\n"
+                                                  f"Кратокое описании компании:\n{mail['prev']}\n"
+                                                  f"Сайт компании: {company.site}\n\n\n"
                                                   f"Тема письма: {mail['theme']}\n\n"
                                                   f"Письмо:\n\n{mail['text']}",
                             reply_markup=get_mail_ikb_full())

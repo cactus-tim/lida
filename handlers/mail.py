@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 
 from database.req import update_user, update_user_x_row_by_status, get_user, get_user_x_row_by_status, update_acc, \
     get_acc
-from keyboards.keyboards import get_mail_ikb
+from keyboards.keyboards import get_mail_ikb, get_mail_ikb_full
 from mails.mail_sender import mail_start, send_mail
 from gpt.gpt_parsers import make_mail
 from bot_instance import bot
@@ -24,7 +24,7 @@ async def cmd_send(callback: F.CallbackQuery, state: FSMContext):
     text = row.comment['text']
     await send_mail(theme, text, company.company_mail, row.acc_id)
     user = await get_user(callback.from_user.id)
-    await update_user(callback.from_user.id, {'cnt': user.cnt + 1})
+    await update_user(callback.from_user.id, {'cnt': user.cnt+1})
     await update_user_x_row_by_status(callback.from_user.id, 'requested', {'status': "waiting_rpl_ans", 'date': datetime.utcnow().date()})
     acc = await get_acc(row.acc_id)
     await update_acc(row.acc_id, {'in_use': acc.in_use+1, 'all_use': acc.all_use+1})
@@ -49,10 +49,11 @@ async def cmd_mail_reject_by_user(callback: F.CallbackQuery, state: FSMContext):
     company = await get_company_by_id(row.company_id)
     user = await get_user(callback.from_user.id)
     mail = await make_mail(user, company)
-    await update_user_x_row_by_status(callback.from_user.id, 'requested', {'comment': mail})
+    await update_user_x_row_by_status(callback.from_user.id, 'requested', {'comment': mail, 'rewrites': row.rewrites+1})
     await bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
     await safe_send_message(bot, callback, text=f"Для компании {company.company_name} я подготовила письмою\n"
-                                                f"Кратокое описании компании:\n{mail['prev']}\n\n\n"
+                                                f"Кратокое описании компании:\n{mail['prev']}\n"
+                                                f"Сайт компании:{company.site}\n\n\n"
                                                 f"Тема письма: {mail['theme']}\n\n"
                                                 f"Письмо:\n\n{mail['text']}",
-                            reply_markup=get_mail_ikb())
+                            reply_markup=(get_mail_ikb() if row.rewrites+1 >= 2 else get_mail_ikb_full()))

@@ -82,6 +82,7 @@ class User_x_Company(Base):
     status = Column(String, default="requested")
     comment = Column(JSON, default="")
     date = Column(Date, default=datetime.utcnow().date())
+    rewrites = Column(Integer, default=0)
     follow_up_cnt = Column(Integer, default=0)
     thread = Column(String, default='')
 

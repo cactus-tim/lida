@@ -146,7 +146,7 @@ async def send_stat(user_tg_id: int):
            f'завтра.\n\n📊 А вот пока ваша статистика:\n\n📨 Сегодня отправлено писем: ')
     stat = '🥳 Новые успешные контакты:\n'
     rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
-    msg += f'{len(rows)}\n\n📬 Ожидаем ответы: '
+    msg += f'{len(rows) if rows else 0}\n\n📬 Ожидаем ответы: '
     rows = await get_all_rows_by_user(user_tg_id)
     for row in rows:
         if row.status == 'waiting_rpl_ans':

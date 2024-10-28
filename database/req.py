@@ -55,7 +55,7 @@ async def get_users_tg_id():
     async with async_session() as session:
         users_tg_id = await session.execute(select(distinct(User.tg_id)))
         users_tg_ids = users_tg_id.scalars().all()
-        if len(users_tg_ids) == 0:
+        if not users_tg_ids:
             raise Error404
         return users_tg_ids
 
@@ -267,7 +267,7 @@ async def get_all_rows_by_user(tg_id: int):
         query = select(Company, subquery).join(subquery, Company.id == subquery.c.company_id)
         result = await session.execute(query)
         res = result.all()
-        if len(res) == 0:
+        if not res:
             raise Error404
         return res
 
@@ -279,7 +279,7 @@ async def get_all_rows_w_date(date):
         query = select(Company, subquery).join(subquery, Company.id == subquery.c.company_id)
         result = await session.execute(query)
         res = result.all()
-        if len(res) == 0:
+        if not res:
             return []
         return res
 
@@ -295,8 +295,8 @@ async def get_all_rows_by_user_w_date(tg_id: int, date):
         query = select(Company, subquery).join(subquery, Company.id == subquery.c.company_id)
         result = await session.execute(query)
         res = result.all()
-        if len(res) == 0:
-            raise Error404
+        if not res:
+            return None
         return res
 
 

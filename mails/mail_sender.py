@@ -114,6 +114,7 @@ async def follow_up_stat(user_id):
                 return msg+'\n\n', False, flag_follow
         else:
             return '', False, flag_follow
+    return '', False, False
 
 
 async def follow_up():
@@ -148,6 +149,8 @@ async def send_stat(user_tg_id: int):
     rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
     msg += f'{0 if not rows else len(rows)}\n\n📬 Ожидаем ответы: '
     rows = await get_all_rows_by_user(user_tg_id)
+    if not rows:
+        return
     for row in rows:
         if row.status == 'waiting_rpl_ans':
             cnt1 += 1

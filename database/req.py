@@ -4,6 +4,7 @@ from database.models import User, Company, User_x_Company, async_session, Acc
 from error_handlers.errors import *
 from error_handlers.handlers import db_error_handler
 
+
 @db_error_handler
 async def get_user(tg_id: int):
     async with async_session() as session:
@@ -354,4 +355,14 @@ async def update_acc(id: int, data: dict):
             setattr(acc, key, value)
         session.add(acc)
         await session.commit()
+
+
+@db_error_handler
+async def get_all_acc():
+    async with async_session() as session:
+        acc_id = await session.execute(select(distinct(Acc.id)))
+        acc_ids = acc_id.scalars().all()
+        if not acc_ids:
+            raise Error404
+        return acc_ids
 

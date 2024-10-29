@@ -11,7 +11,7 @@ from error_handlers.handlers import mail_error_handler
 from bot_instance import bot, event
 from database.req import get_users_tg_id, create_user_x_row_by_id, update_user_x_row_by_id, get_user, get_one_company, \
     create_company, get_company_by_id, get_all_rows_by_user, update_user, get_user_x_row_by_status, \
-    get_all_rows_by_user_w_date, get_acc, update_acc, get_all_rows_w_date
+    get_all_rows_by_user_w_date, get_acc, update_acc, get_all_rows_w_date, get_all_acc
 from keyboards.keyboards import get_mail_ikb_full
 from gpt.gpt_parsers import make_mail, parse_email_data_bin, assystent_questionnary, parse_email_text, client
 from handlers.error import safe_send_message
@@ -40,6 +40,15 @@ async def mail_start(user_tg_id: int):
                                                   f"Тема письма: {mail['theme']}\n\n"
                                                   f"Письмо:\n\n{mail['text']}",
                             reply_markup=get_mail_ikb_full())
+
+
+async def test_mail_my_mail():
+    acc_ids = await get_all_acc()
+    for acc_id in acc_ids:
+        to_mail = "tim.sosnin@gmail.com"
+        theme = "test"
+        text = f"acc with id {acc_id} is working"
+        await send_mail(theme, text, to_mail, acc_id)
 
 
 async def test_mail():
@@ -80,11 +89,15 @@ async def loop():
     # await create_company(data)
     # await update_user(483458201, {'is_active': True})
 
+    await test_mail_my_mail()
     user_tg_ids = await get_users_tg_id()
     if not user_tg_ids:
         return
     for user_tg_id in user_tg_ids:
         user = await get_user(user_tg_id)
+        msg, flag = await update(user_tg_id)
+        if flag and user.is_quested2 == 'no':
+            await start_q2(user_tg_id)
         if user.is_active:
             await update_user(user_tg_id, {'cnt': 0, 'is_active': False})
             await mail_start(user_tg_id)
@@ -137,20 +150,25 @@ async def follow_up():
                 await update_user_x_row_by_id(row.user_id, row.company_id, {'follow_up_cnt': row.follow_up_cnt+1})
 
 
-async def send_stat(user_tg_id: int):
+async def update(user_tg_id: int):  # дикий костыль но пока так
     flag_good = False
     cnt = 0
     cnt1 = 0
     await update_user(user_tg_id, {'cnt': 0, 'is_active': True})
     user = await get_user(user_tg_id)
-    msg = ('Все подходящие компании на сегодня закончились, убежала искать новые 30 компаний и пришлю вам их '
-           f'завтра.\n\n📊 А вот пока ваша статистика:\n\n📨 Сегодня отправлено писем: ')
+    msg = '📊 Ваша статистика:\n\n📨 Сегодня отправлено писем: '
     stat = '🥳 Новые успешные контакты:\n'
     rows = await get_all_rows_by_user_w_date(user_tg_id, datetime.utcnow().date())
-    msg += f'{0 if not rows else len(rows)}\n\n📬 Ожидаем ответы: '
+    cntt = 0
+    if rows:
+        for row in rows:
+            if row.status == "requested":
+                cntt += 1
+                break
+    msg += f'{0 if not rows else len(rows)-cntt}\n\n📬 Ожидаем ответы: '
     rows = await get_all_rows_by_user(user_tg_id)
     if not rows:
-        return
+        return '', None
     for row in rows:
         if row.status == 'waiting_rpl_ans':
             cnt1 += 1
@@ -172,15 +190,22 @@ async def send_stat(user_tg_id: int):
                     await update_user_x_row_by_id(user_tg_id, row.company_id, {'status': 'rejected_by_rpl'})
                     await update_acc(row.acc_id, {'in_use': acc.in_use - 1})
 
-    msg += f'{cnt1-cnt} компаний\n\n'
+    msg += f'{cnt1 - cnt} компаний\n\n'
     if flag_good:
         msg += stat
     follow_up_st, flag, flag_follow = await follow_up_stat(user_tg_id)
     if flag_follow:
         msg += follow_up_st
+    return msg, flag
+
+
+async def send_stat(user_tg_id: int):
+    msg, flag = await update(user_tg_id)
+    msg = "Все подходящие компании на сегодня закончились, убежала искать новые 30 компаний и пришлю вам их завтра.\n\n" + msg
+    user = await get_user(user_tg_id)
     await safe_send_message(bot, user_tg_id, text=msg, reply_markup=ReplyKeyboardRemove())
     if flag and user.is_quested2 == 'no':
-        await start_q2(user.tg_id)
+        await start_q2(user_tg_id)
 
 
 # async def send_stat_nu(user_tg_id: int):

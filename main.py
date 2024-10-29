@@ -41,7 +41,7 @@ async def main() -> None:
 
     # scheduler.add_job(loop, 'interval', seconds=86400, start_date=datetime.now() + timedelta(seconds=600),
     #                   id='loop')
-    scheduler.add_job(loop, 'cron', hour=20, minute=31, id='loop', timezone=timezone('Europe/Moscow'))
+    scheduler.add_job(loop, 'cron', hour=12, minute=15, id='loop', timezone=timezone('Europe/Moscow'))
 
     try:
         scheduler.start()

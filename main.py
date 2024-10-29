@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from confige import BotConfig
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta
+from pytz import timezone
 
 from bot_instance import bot
 from database.parse_company import csv_to_db
@@ -40,10 +41,10 @@ async def main() -> None:
 
     # scheduler.add_job(loop, 'interval', seconds=86400, start_date=datetime.now() + timedelta(seconds=600),
     #                   id='loop')
-    scheduler.add_job(loop, 'cron', hour=12, minute=15, id='loop')
+    scheduler.add_job(loop, 'cron', hour=20, minute=31, id='loop', timezone=timezone('Europe/Moscow'))
 
     try:
-        # scheduler.start()
+        scheduler.start()
         # await test_mail()
         # await loop()
         # await send_stat(483458201)

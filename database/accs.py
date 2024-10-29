@@ -1,8 +1,10 @@
 import pandas as pd
+import os
 
 from database.req import create_acc
 
-file_path = '/Users/timofejsosnin/PycharmProjects/lida/lida/database/accs.csv'
+current_dir = os.path.dirname(__file__)
+file_path = os.path.join(current_dir, 'accs.csv')
 
 
 async def accs_to_db():

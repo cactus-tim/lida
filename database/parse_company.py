@@ -2,10 +2,12 @@ import pandas as pd
 import ast
 from datetime import datetime
 import openpyxl
+import os
 
 from database.req import create_company
 
-file_path = '/Users/timofejsosnin/Downloads/merged_data_2010_.xlsx'  # path to .csv file on your computer
+current_dir = os.path.dirname(__file__)
+file_path = os.path.join(current_dir, 'merged_data_2010_.xlsx')
 
 
 async def csv_to_db_nu():
